@@ -5,3 +5,4 @@ openai
 pydantic
 gspread
 google-auth
+google-genai
