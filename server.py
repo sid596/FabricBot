@@ -49,41 +49,8 @@ def webhook():
 
             message = message_data["text"]["body"]
 
-            print(message)
 
-            result = understand(message)
-            print(result)
-
-            reply = ""
-
-            if result["intent"] == "price_lookup":
-
-                matches = search_fabric(result["fabric"])
-
-                print("Matches:", matches)
-
-                if matches:
-
-                    for fabric in matches:
-
-                        reply += (
-                            f"Album: {fabric['album']}\n"
-                            f"Quality: {fabric['quality']}\n"
-                            f"Price: ₹{fabric['price']}/m\n"
-                            f"Width: {fabric['width']} inches\n\n"
-                        )
-
-                else:
-                    reply = "Sorry, I couldn't find that fabric."
-
-            else:
-                reply = "Sorry, I didn't understand your request."
-
-            send_message(phone, reply)
-
-        # -----------------------------
-        # IMAGE MESSAGE
-        # -----------------------------
+         # IMAGE MESSAGE
         elif message_type == "image":
 
             image_id = message_data["image"]["id"]
@@ -96,17 +63,40 @@ def webhook():
 
             app.logger.info(result)
 
-            code = result["code"]
+            message = result["code"]
+            print(message)
+        else:
+            print("Unsupported message type.")
+        result = understand(message)
+        print(result)
 
-            send_message(phone, code)
-            print(f"Saved image to {image_path}")
+        reply = ""
 
+        if result["intent"] == "price_lookup":
 
-            # We'll download the image and process it here next.
+            matches = search_fabric(result["fabric"])
+
+            print("Matches:", matches)
+
+            if matches:
+
+                for fabric in matches:
+
+                    reply += (
+                        f"Album: {fabric['album']}\n"
+                        f"Quality: {fabric['quality']}\n"
+                        f"Price: ₹{fabric['price']}/m\n"
+                        f"Width: {fabric['width']} inches\n\n"
+                    )
+
+            else:
+                reply = "Sorry, I couldn't find that fabric."
 
         else:
+            reply = "Sorry, I didn't understand your request."
 
-            print("Unsupported message type.")
+        send_message(phone, reply)
+
 
         return "OK", 200
 
