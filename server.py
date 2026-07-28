@@ -95,7 +95,7 @@ def webhook():
 
             send_message(
                 phone,
-                "📷 Image received successfully!"
+                image_id
             )
 
             # We'll download the image and process it here next.
