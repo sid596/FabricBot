@@ -33,19 +33,18 @@ Rules:
 - If no product code is visible, return exactly NOT_FOUND.
 """
 
+    uploaded_file = client.files.upload(file=image_path)
+
     response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=[
-        prompt,
-        {
-            "mime_type": "image/jpeg",
-            "data": image_bytes,
+        model="gemini-2.5-flash",
+        contents=[
+            prompt,
+            uploaded_file,
+        ],
+        config={
+            "response_mime_type": "application/json",
+            "response_schema": ImageResult,
         },
-    ],
-    config={
-        "response_mime_type": "application/json",
-        "response_schema": ImageResult,
-    },
-)
+    )
 
     return response.parsed.model_dump()
