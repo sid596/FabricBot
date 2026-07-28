@@ -2,7 +2,7 @@ from flask import Flask, request
 from ai import understand
 from search import search_fabric
 from whatsapp import send_message
-
+from images import download_image
 app = Flask(__name__)
 
 VERIFY_TOKEN = "fabricbot123"
@@ -36,43 +36,73 @@ def webhook():
         message_data = value["messages"][0]
 
         phone = message_data["from"]
-        message = message_data["text"]["body"]
+        message_type = message_data["type"]
 
-        print(phone)
-        print(message)
+        print(f"Phone: {phone}")
+        print(f"Message Type: {message_type}")
 
-        result = understand(message)
-        print(result)
+        # -----------------------------
+        # TEXT MESSAGE
+        # -----------------------------
+        if message_type == "text":
 
-        reply = ""
+            message = message_data["text"]["body"]
 
-        if result["intent"] == "price_lookup":
-            matches = search_fabric(result["fabric"])
-            print("Matches:", matches)
-            if matches:
+            print(message)
 
-                for fabric in matches:
+            result = understand(message)
+            print(result)
 
-                    reply += (
+            reply = ""
 
-                        f"Album: {fabric['album']}\n"
+            if result["intent"] == "price_lookup":
 
-                        f"Quality: {fabric['quality']}\n"
+                matches = search_fabric(result["fabric"])
 
-                        f"Price: ₹{fabric['price']}/m\n"
+                print("Matches:", matches)
 
-                        f"Width: {fabric['width']} inches\n\n"
+                if matches:
 
-                    )
+                    for fabric in matches:
+
+                        reply += (
+                            f"Album: {fabric['album']}\n"
+                            f"Quality: {fabric['quality']}\n"
+                            f"Price: ₹{fabric['price']}/m\n"
+                            f"Width: {fabric['width']} inches\n\n"
+                        )
+
+                else:
+                    reply = "Sorry, I couldn't find that fabric."
+
             else:
+                reply = "Sorry, I didn't understand your request."
 
-                reply = "Sorry, I couldn't find that fabric."
+            send_message(phone, reply)
+
+        # -----------------------------
+        # IMAGE MESSAGE
+        # -----------------------------
+        elif message_type == "image":
+
+            image_id = message_data["image"]["id"]
+
+            print(f"Image ID: {image_id}")
+
+            image_path = download_image(image_id)
+
+            print(f"Saved image to {image_path}")
+
+            send_message(
+                phone,
+                "📷 Image received successfully!"
+            )
+
+            # We'll download the image and process it here next.
 
         else:
 
-            reply = "Sorry, I didn't understand your request."
-
-        send_message(phone, reply)
+            print("Unsupported message type.")
 
         return "OK", 200
 
