@@ -3,6 +3,7 @@ from ai import understand
 from search import search_fabric
 from whatsapp import send_message
 from images import download_image
+from vision import extract_code
 app = Flask(__name__)
 
 VERIFY_TOKEN = "fabricbot123"
@@ -91,12 +92,15 @@ def webhook():
 
             image_path = download_image(image_id)
 
+            result = extract_code(image_path)
+
+            app.logger.info(result)
+
+            code = result["code"]
+
+            send_message(phone, code)
             print(f"Saved image to {image_path}")
 
-            send_message(
-                phone,
-                image_id
-            )
 
             # We'll download the image and process it here next.
 
