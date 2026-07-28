@@ -15,56 +15,68 @@ def home():
 @app.route("/webhook", methods=["POST", "GET"])
 def webhook():
     if request.method == "GET":
-
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
-        print("Meta sent token:", token)
-        print("Our token:", VERIFY_TOKEN)
+
         if token == VERIFY_TOKEN:
             return challenge, 200
 
         return "Verification failed", 403
 
-        
-    
-    data = request.json
+    try:
+        data = request.json
+        print("========== WEBHOOK ==========")
+        print(data)
 
-    value = data["entry"][0]["changes"][0]["value"]
+        value = data["entry"][0]["changes"][0]["value"]
 
-    if "messages" not in value:
+        if "messages" not in value:
+            return "OK", 200
+
+        message_data = value["messages"][0]
+
+        phone = message_data["from"]
+        message = message_data["text"]["body"]
+
+        print(phone)
+        print(message)
+
+        result = understand(message)
+        print(result)
+
+        reply = ""
+
+        if result["intent"] == "price_lookup":
+            matches = search_fabric(result["fabric"])
+            print("Matches:", matches)
+            if matches:
+
+                for fabric in matches:
+
+                    reply += (
+
+                        f"Album: {fabric['album']}\n"
+
+                        f"Quality: {fabric['quality']}\n"
+
+                        f"Price: ₹{fabric['price']}/m\n"
+
+                        f"Width: {fabric['width']} inches\n\n"
+
+                    )
+            else:
+
+                reply = "Sorry, I couldn't find that fabric."
+
+        else:
+
+            reply = "Sorry, I didn't understand your request."
+
+        send_message(phone, reply)
+
         return "OK", 200
 
-    message_data = value["messages"][0]
-
-    phone = message_data["from"]
-    message = message_data["text"]["body"]
-
-    print(phone)
-    print(message)
-
-    result = understand(message)
-
-    print(result)
-    reply = ""
-    if result["intent"] == "price_lookup":
-
-        matches = search_fabric(result["fabric"])
-
-
-        for fabric in matches:
-            reply += (
-                f"Album: {fabric['album']}\n"
-                f"Quality: {fabric['quality']}\n"
-                f"Price: ₹{fabric['price']}/m\n"
-                f"Width: {fabric['width']} inches\n\n"
-            )
-        print(reply)
-    
-
-    send_message(phone, reply)
-
-   
-    return "OK", 200
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return "ERROR", 500
