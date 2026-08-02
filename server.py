@@ -5,7 +5,9 @@ from whatsapp import send_message
 from images import download_image
 from vision import extract_code
 app = Flask(__name__)
+from database import init_db, get_or_create_conversation
 
+init_db()
 VERIFY_TOKEN = "fabricbot123"
 
 @app.route("/")
@@ -37,6 +39,8 @@ def webhook():
         message_data = value["messages"][0]
 
         phone = message_data["from"]
+        conversation = get_or_create_conversation(phone)
+        print(conversation)
         message_type = message_data["type"]
 
         print(f"Phone: {phone}")
