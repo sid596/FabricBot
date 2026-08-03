@@ -9,20 +9,49 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
+from typing import Optional
+
 class Intent(BaseModel):
     intent: str
-    fabric: str
+
+    fabric: Optional[str] = None
+
+    width: Optional[int] = None
+    height: Optional[int] = None
+
+    track: Optional[str] = None
+    curtain_style: Optional[str] = None
+
+    discount: Optional[float] = None
 
 
 def understand(message):
 
     prompt = f"""
-You are an AI assistant for a curtain business.
+You are an AI assistant for a curtain furnishing business.
 
-Determine the user's intent and the fabric they are referring to.
+Extract information from the user's message.
 
-If they ask for a price, search, find, give, the intent is "price_lookup". if they ask for quotation then intent is "quotation"
-if the ask is just one word wihtout price keyword its most liekly fabric name and provide price for the same
+Return ONLY JSON.
+
+Fields:
+
+intent
+fabric
+width
+height
+track
+curtain_style
+discount
+
+Rules:
+
+- If the user wants a quotation, intent = "quotation"
+- If the user wants fabric price, intent = "price_lookup"
+- If they only write a fabric name like "Luna", assume they want a price lookup.
+- Width and height are in inches unless stated otherwise.
+- If any field isn't mentioned, return null.
+- Do not guess values.
 
 User:
 {message}
@@ -43,3 +72,16 @@ User:
     # print(response.parsed)
 
     return response.parsed.model_dump()
+if __name__ == "__main__":
+
+    tests = [
+        "Luna",
+        "Price of Luna",
+        "Quote Luna 71 x 65",
+        "Quote Luna 84 x 140 premium track",
+        "Quote Luna 71 x 65 with 15% discount",
+    ]
+
+    for t in tests:
+        print(f"\nINPUT: {t}")
+        print(understand(t))

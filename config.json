@@ -1,0 +1,89 @@
+{
+  "calculation": {
+	  
+    "fold_margin_inches": 15,
+    "inches_per_meter": 39.3701,
+    "panel_count_rounding": "nearest",
+    "fabric_rounding_increment_meters": 1,
+    "track_length_rounding_feet": 1,
+    "fitting_charge": 250,
+    "currency_rounding": 1,
+    "default_fabric_discount_percent": 10,
+    "default_track": "MTrack Premium",
+	"default_style": "Pleated",
+	"gst": {
+    "fabric": 5,
+    "stitching": 5,
+    "track": 18,
+    "fitting": 18
+}
+  },
+  "curtain_types": {
+    "Main 48": {
+    "fabric_width_inches": 48,
+    "finished_panel_width_inches": 20
+},
+"Main 54": {
+    "fabric_width_inches": 54,
+    "finished_panel_width_inches": 22.5
+},
+"Sheer 48": {
+    "fabric_width_inches": 48,
+    "finished_panel_width_inches": 20
+},
+"Sheer 54": {
+    "fabric_width_inches": 54,
+    "finished_panel_width_inches": 22.5
+}
+  },
+  "track_rates_per_running_foot": {
+    "Standard Track": 150,
+    "MTrack Premium": 275,
+    "MTrack Silent": 390,
+    "Jumbo Track": 490,
+    "Golden Rod": 350,
+    "SS Rods": 275,
+    "Silent Rod Gold": 550,
+    "Antique Rods": 350,
+    "I-Track": 390,
+    "ITrack": 420,
+    "Ripple": 350,
+    "Motorised track": 890,
+    "Flat Track": 590,
+    "Zebra Blind": 320,
+    "Colored Track": 450
+  },
+  "style_rates_per_panel": {
+    "Eyelet": 390,
+    "Pleated": 220,
+    "Arabian": 490,
+    "Ripple": 250,
+    "Satin Lining": 110,
+    "Blackout Lining": 220,
+    "Roman blind": 210,
+    "Zebra Blind Customised": 400,
+    "Zebra blind Standard": 320,
+    "Roller Blind without pelmet basic": 150,
+    "Roller Blind with pelmet basic": 290,
+    "Roller Blind without Pelmet Premium": 210,
+    "Roller Blind with Pelmet Premium": 260,
+    "Roller Blind without Pelmet Premium - Grade 2": 310,
+    "Roller Blind with Pelmet Premium - Grade 2": 360,
+    "Roller Blind without Pelmet Customised Foiling": 350,
+    "Roller Blind with Pelmet Foiling": 390,
+    "PVC Bamboo chick Blind": 195,
+    "Venetian Metalic": 500,
+    "Venetian Blind": 400,
+    "PVC Blind": 195,
+    "Zebra Blind Embroidary": 450,
+    "Wooden Flooring": 120,
+    "Vinyle Flooring": 80,
+    "Vinyle Flooring 2mm": 95,
+    "PVC Panel": 250,
+    "WPC Panel": 350,
+    "Charcoal Panel": 450,
+    "Plywood Panel": 350
+  }
+
+
+}
