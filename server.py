@@ -109,24 +109,24 @@ def webhook():
             else:
 
                 fabric = matches[0]
-                if result["height"] is None or result["width"] is None:
-                    reply = "Please provide the window height and width in inches."
-                else:
-                    quote = calculate_curtain_quote(
-                        QuotationInput(
-                            curtain_type=(
-                                "Main 54"
-                                if int(fabric["width"]) == 54
-                                else "Main 48"
-                            ),
-                            track_type=result["track"] or "MTrack Premium",
-                            curtain_style=result["curtain_style"] or "Pleated",
-                            height_inches=Decimal(result["height"]),
+
+                width = int(fabric["width"].replace('"', "").strip())
+
+                quote = calculate_curtain_quote(
+                    QuotationInput(
+                        curtain_type=(
+                            "Main 54"
+                            if width == 54
+                            else "Main 48"
+                        ),
+                        track_type=result["track"] or "MTrack Premium",
+                        curtain_style=result["curtain_style"] or "Pleated",
+                        height_inches=Decimal(result["height"]),
                         width_inches=Decimal(result["width"]),
                         fabric_price_per_meter=Decimal(fabric["price"]),
-                        ),
-                        quote_config,
-                    )
+                    ),
+                    quote_config,
+)
 
             reply = (
                 f"Quotation\n\n"
