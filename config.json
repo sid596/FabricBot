@@ -48,42 +48,23 @@
     "I-Track": 390,
     "ITrack": 420,
     "Ripple": 350,
-    "Motorised track": 890,
+    "Motorised Track": 890,
     "Flat Track": 590,
-    "Zebra Blind": 320,
     "Colored Track": 450
   },
   "style_rates_per_panel": {
     "Eyelet": 390,
     "Pleated": 220,
     "Arabian": 490,
-    "Ripple": 250,
-    "Satin Lining": 110,
-    "Blackout Lining": 220,
-    "Roman blind": 210,
-    "Zebra Blind Customised": 400,
-    "Zebra blind Standard": 320,
-    "Roller Blind without pelmet basic": 150,
-    "Roller Blind with pelmet basic": 290,
-    "Roller Blind without Pelmet Premium": 210,
-    "Roller Blind with Pelmet Premium": 260,
-    "Roller Blind without Pelmet Premium - Grade 2": 310,
-    "Roller Blind with Pelmet Premium - Grade 2": 360,
-    "Roller Blind without Pelmet Customised Foiling": 350,
-    "Roller Blind with Pelmet Foiling": 390,
-    "PVC Bamboo chick Blind": 195,
-    "Venetian Metalic": 500,
-    "Venetian Blind": 400,
-    "PVC Blind": 195,
-    "Zebra Blind Embroidary": 450,
-    "Wooden Flooring": 120,
-    "Vinyle Flooring": 80,
-    "Vinyle Flooring 2mm": 95,
-    "PVC Panel": 250,
-    "WPC Panel": 350,
-    "Charcoal Panel": 450,
-    "Plywood Panel": 350
-  }
+    "Ripple": 250
+  }, 
+  "lining_rates_per_panel": {
+
+    "Satin": 110,
+
+    "Blackout": 220
+
+}
 
 
 }

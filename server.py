@@ -1,13 +1,17 @@
 from flask import Flask, request
 from ai import understand
+from quotation import calculate_curtain_quote, QuotationInput
 from search import search_fabric
 from whatsapp import send_message
 from images import download_image
 from vision import extract_code
+from quotation import load_config
+from decimal import Decimal
 app = Flask(__name__)
 from database import init_db, get_or_create_conversation
 
 init_db()
+quote_config = load_config("config.json")
 VERIFY_TOKEN = "fabricbot123"
 
 @app.route("/")
@@ -95,8 +99,45 @@ def webhook():
 
             else:
                 reply = "Sorry, I couldn't find that fabric."
+        elif result["intent"] == "quotation":
 
-        else:
+            matches = search_fabric(result["fabric"])
+
+            if not matches:
+                reply = "Sorry, I couldn't find that fabric."
+
+            else:
+
+                fabric = matches[0]
+                if result["height"] is None or result["width"] is None:
+                    reply = "Please provide the window height and width in inches."
+                else:
+                    quote = calculate_curtain_quote(
+                        QuotationInput(
+                            curtain_type=(
+                                "Main 54"
+                                if int(fabric["width"]) == 54
+                                else "Main 48"
+                            ),
+                            track_type=result["track"] or "MTrack Premium",
+                            curtain_style=result["curtain_style"] or "Pleated",
+                            height_inches=Decimal(result["height"]),
+                        width_inches=Decimal(result["width"]),
+                        fabric_price_per_meter=Decimal(fabric["price"]),
+                        ),
+                        quote_config,
+                    )
+
+            reply = (
+                f"Quotation\n\n"
+                f"Fabric: ₹{quote.total_fabric_cost}\n"
+                f"Track: ₹{quote.total_track_cost}\n"
+                f"Stitching: ₹{quote.total_stitching_cost}\n"
+                f"Fitting: ₹{quote.fitting_charges}\n"
+                f"GST: ₹{quote.gst_total}\n\n"
+                f"Grand Total: ₹{quote.grand_total}"
+            )
+        else:   
             reply = "Sorry, I didn't understand your request."
 
         send_message(phone, reply)
