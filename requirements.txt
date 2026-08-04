@@ -6,3 +6,4 @@ pydantic
 gspread
 google-auth
 google-genai
+rapidfuzz
