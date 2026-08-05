@@ -132,6 +132,7 @@ def webhook():
                             height_inches=Decimal(result["height"]),
                             width_inches=Decimal(result["width"]),
                             fabric_price_per_meter=Decimal(fabric["price"]),
+                            order_type=result["order_type"] or "full",
                         ),
                         quote_config,
                     )

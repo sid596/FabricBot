@@ -24,6 +24,7 @@ class QuotationInput:
     height_inches: Decimal
     width_inches: Decimal
     fabric_price_per_meter: Decimal
+    order_type: str = "full"
 
 
 @dataclass(frozen=True)
@@ -94,6 +95,15 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     _positive(data.height_inches, "height")
     _positive(data.width_inches, "width")
     _positive(data.fabric_price_per_meter, "fabric price")
+    # -----------------------------
+# Order type flags
+# -----------------------------
+    has_curtains = data.order_type in ("full", "curtains_only")
+    has_track = data.order_type in ("full", "track_only")
+
+    stitching_discount = has_curtains
+    apply_track_discount = has_track and has_curtains
+
 
     fabric_width = Decimal(curtain_types[data.curtain_type]["fabric_width_inches"])
     margin = Decimal(calc["fold_margin_inches"])
@@ -134,22 +144,59 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     )
     
     stitching_rate = Decimal(styles[data.curtain_style])
-    stitching_cost = _money(stitching_rate * panels, money_increment)
+
+    stitching_cost = _money(
+        stitching_rate * panels,
+        money_increment,
+    )
+
+    if stitching_discount:
+        stitching_cost = _money(
+            Decimal(stitching_cost)
+            * (Decimal(100) - Decimal(calc["discounts"]["stitching_percent"]))
+            / Decimal(100),
+            money_increment,
+        )
 
     raw_track_feet = data.width_inches / Decimal(12)
     track_feet = _round_up_to_increment(raw_track_feet, track_increment)
     track_rate = Decimal(tracks[data.track_type])
-    track_cost = _money(track_feet * track_rate, money_increment)
+    track_cost = _money(
+    track_feet * track_rate,
+    money_increment,
+)
+
+    if apply_track_discount:
+        track_cost = _money(
+            Decimal(track_cost)
+            * (Decimal(100) - Decimal(calc["discounts"]["track_percent"]))
+            / Decimal(100),
+            money_increment,
+        )
+
+    clamp_spacing = Decimal(calc["fitting"]["clamp_spacing_inches"])
+    minimum_clamps = int(calc["fitting"]["minimum_clamps"])
+    charge_per_clamp = Decimal(calc["fitting"]["charge_per_clamp"])
 
     fitting_units = max(
-    1,
-    round(float((track_feet * Decimal(12)) / Decimal(60)))
+        minimum_clamps,
+        math.ceil(float(data.width_inches / clamp_spacing)),
     )
 
     fitting_charges = _money(
-        Decimal(fitting_units) * Decimal(calc["fitting_charge"]),
+        Decimal(fitting_units) * charge_per_clamp,
         money_increment,
     )
+
+    if not has_curtains:
+        fabric_cost = 0
+        stitching_cost = 0
+
+    if not has_track:
+        track_cost = 0
+        fitting_charges = 0
+
+
     gst = calc["gst"]
 
     fabric_gst = _money(

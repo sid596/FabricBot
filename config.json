@@ -6,9 +6,21 @@
     "panel_count_rounding": "nearest",
     "fabric_rounding_increment_meters": 1,
     "track_length_rounding_feet": 1,
-    "fitting_charge": 250,
+    "fitting": {
+
+    "charge_per_clamp": 250,
+
+    "clamp_spacing_inches": 30,
+
+    "minimum_clamps": 2
+
+},
     "currency_rounding": 1,
     "default_fabric_discount_percent": 10,
+    "discounts": {
+    "track_percent": 30,
+    "stitching_percent": 50
+},
     "default_track": "MTrack Premium",
 	"default_style": "Pleated",
 	"gst": {

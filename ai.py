@@ -24,7 +24,7 @@ class Intent(BaseModel):
     curtain_style: Optional[str] = None
 
     discount: Optional[float] = None
-
+    
 
 def understand(message):
 
@@ -222,9 +222,37 @@ Do not invent:
 - curtain_style
 - fabric
 - fabric_price
+Determine order_type.
 
+If the customer asks for curtains or a quotation without specifying otherwise,
+assume:
+
+order_type = "full"
+
+If they explicitly say only curtains:
+
+order_type = "curtains_only"
+
+If they explicitly ask only for tracks or rods:
+
+order_type = "track_only"
+
+Otherwise return null.
 If information is missing, return null.
+-----------------------
+BUSINESS KNOWLEDGE
+-----------------------
+Order types:
 
+full
+- Customer wants curtains and track.
+
+curtains_only
+- Customer wants only curtains.
+- They already have tracks or explicitly say no track.
+
+track_only
+- Customer wants only tracks or rods.
 -----------------------
 OUTPUT
 -----------------------
@@ -253,15 +281,11 @@ User:
 if __name__ == "__main__":
 
     tests = [
-    "Luna",
-    "Price of Luna",
     "Quotation Luna 71x65",
-    "Quotation Luna 71x65 silent track",
-    "Quotation Luna 71x65 premium track",
-    "Quotation Luna 71x65 pinch pleat",
-    "Quotation for 7 feet height and 8 feet width with single track. Fabric price is 590",
-    "Fabric price is 690, size 71x65",
-    "Need quotation, price 590, height 84 width 96",
+    "Quotation Luna 71x65 curtains only",
+    "Quotation Luna 71x65 only track",
+    "Need only MTrack Premium for 8 feet",
+    "I already have tracks, quotation for Luna",
 ]
 
     for t in tests:
