@@ -175,18 +175,26 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         )
 
     clamp_spacing = Decimal(calc["fitting"]["clamp_spacing_inches"])
-    minimum_clamps = int(calc["fitting"]["minimum_clamps"])
-    charge_per_clamp = Decimal(calc["fitting"]["charge_per_clamp"])
+    minimum_sections = int(calc["fitting"]["minimum_sections"])
+    fitting_quotient = float(data.width_inches) / 60
 
+    rounded_fitting_quotient = math.floor(fitting_quotient * 2 + 0.5) / 2
     fitting_units = max(
-        minimum_clamps,
-        round(float(data.width_inches / clamp_spacing)),
+
+        minimum_sections,
+
+        rounded_fitting_quotient,
+
     )
 
     fitting_charges = _money(
-        Decimal(fitting_units) * charge_per_clamp,
+
+        Decimal(str(fitting_units)) * calc["fitting"]["charge_per_unit"],
+
         money_increment,
+
     )
+        
 
     if not has_curtains:
         fabric_cost = 0

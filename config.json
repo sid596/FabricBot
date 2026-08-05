@@ -8,11 +8,11 @@
     "track_length_rounding_feet": 1,
     "fitting": {
 
-    "charge_per_clamp": 125,
+    "charge_per_unit": 250,
 
     "clamp_spacing_inches": 30,
 
-    "minimum_clamps": 2
+    "minimum_sections": 1
 
 },
     "currency_rounding": 1,
