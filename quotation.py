@@ -131,7 +131,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         fabric_increment,
     )
 
-    original_fabric_cost = _money(
+    fabric_cost = _money(
     total_fabric_meters * data.fabric_price_per_meter,
     money_increment,
 )
@@ -139,20 +139,20 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     discount = Decimal(calc["default_fabric_discount_percent"])
 
     fabric_cost = _money(
-        Decimal(original_fabric_cost) * (Decimal(100) - discount) / Decimal(100),
+        Decimal(fabric_cost) * (Decimal(100) - discount) / Decimal(100),
         money_increment,
     )
     
     stitching_rate = Decimal(styles[data.curtain_style])
 
-    original_stitching_cost = _money(
+    stitching_cost = _money(
         stitching_rate * panels,
         money_increment,
     )
 
     if stitching_discount:
         stitching_cost = _money(
-            Decimal(original_stitching_cost)
+            Decimal(stitching_cost)
             * (Decimal(100) - Decimal(calc["discounts"]["stitching_percent"]))
             / Decimal(100),
             money_increment,
@@ -161,14 +161,14 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     raw_track_feet = data.width_inches / Decimal(12)
     track_feet = _round_up_to_increment(raw_track_feet, track_increment)
     track_rate = Decimal(tracks[data.track_type])
-    original_track_cost = _money(
+    track_cost = _money(
     track_feet * track_rate,
     money_increment,
 )
 
     if apply_track_discount:
         track_cost = _money(
-            Decimal(original_track_cost)
+            Decimal(track_cost)
             * (Decimal(100) - Decimal(calc["discounts"]["track_percent"]))
             / Decimal(100),
             money_increment,
@@ -208,17 +208,17 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     gst = calc["gst"]
 
     fabric_gst = _money(
-        Decimal(original_fabric_cost) * Decimal(gst["fabric"]) / Decimal(100),
+        Decimal(fabric_cost) * Decimal(gst["fabric"]) / Decimal(100),
         money_increment,
     )
 
     stitching_gst = _money(
-        Decimal(original_stitching_cost) * Decimal(gst["stitching"]) / Decimal(100),
+        Decimal(stitching_cost) * Decimal(gst["stitching"]) / Decimal(100),
         money_increment,
     )
 
     track_gst = _money(
-        Decimal(original_track_cost) * Decimal(gst["track"]) / Decimal(100),
+        Decimal(track_cost) * Decimal(gst["track"]) / Decimal(100),
         money_increment,
     )
 
