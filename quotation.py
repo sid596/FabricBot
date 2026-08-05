@@ -249,8 +249,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         total_stitching_cost=stitching_cost,
         track_length_feet=float(track_feet),
         track_rate_per_foot=int(track_rate),
-        total_
-        =track_cost,
+        total_track_cost=track_cost,
         fitting_sections=fitting_units,
         fitting_charges=fitting_charges,
         gst_total=gst_total,
