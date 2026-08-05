@@ -145,7 +145,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     
     stitching_rate = Decimal(styles[data.curtain_style])
 
-    stitching_cost = _money(
+    original_stitching_cost = _money(
         stitching_rate * panels,
         money_increment,
     )
@@ -161,7 +161,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     raw_track_feet = data.width_inches / Decimal(12)
     track_feet = _round_up_to_increment(raw_track_feet, track_increment)
     track_rate = Decimal(tracks[data.track_type])
-    track_cost = _money(
+    original_track_cost = _money(
     track_feet * track_rate,
     money_increment,
 )
@@ -208,17 +208,17 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     gst = calc["gst"]
 
     fabric_gst = _money(
-        Decimal(fabric_cost) * Decimal(gst["fabric"]) / Decimal(100),
+        Decimal(original_fabric_cost) * Decimal(gst["fabric"]) / Decimal(100),
         money_increment,
     )
 
     stitching_gst = _money(
-        Decimal(stitching_cost) * Decimal(gst["stitching"]) / Decimal(100),
+        Decimal(original_stitching_cost) * Decimal(gst["stitching"]) / Decimal(100),
         money_increment,
     )
 
     track_gst = _money(
-        Decimal(track_cost) * Decimal(gst["track"]) / Decimal(100),
+        Decimal(original_track_cost) * Decimal(gst["track"]) / Decimal(100),
         money_increment,
     )
 
@@ -249,7 +249,8 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         total_stitching_cost=stitching_cost,
         track_length_feet=float(track_feet),
         track_rate_per_foot=int(track_rate),
-        total_track_cost=track_cost,
+        total_
+        =track_cost,
         fitting_sections=fitting_units,
         fitting_charges=fitting_charges,
         gst_total=gst_total,
