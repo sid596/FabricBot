@@ -180,7 +180,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
 
     fitting_units = max(
         minimum_clamps,
-        math.ceil(float(data.width_inches / clamp_spacing)),
+        math.round(float(data.width_inches / clamp_spacing)),
     )
 
     fitting_charges = _money(
