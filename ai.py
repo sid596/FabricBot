@@ -24,7 +24,7 @@ class Intent(BaseModel):
     curtain_style: Optional[str] = None
 
     discount: Optional[float] = None
-    
+    order_type: Optional[str] = None
 
 def understand(message):
 
