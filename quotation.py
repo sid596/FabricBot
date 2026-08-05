@@ -152,7 +152,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
 
     if stitching_discount:
         stitching_cost = _money(
-            Decimal(stitching_cost)
+            Decimal(original_stitching_cost)
             * (Decimal(100) - Decimal(calc["discounts"]["stitching_percent"]))
             / Decimal(100),
             money_increment,
@@ -168,7 +168,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
 
     if apply_track_discount:
         track_cost = _money(
-            Decimal(track_cost)
+            Decimal(original_track_cost)
             * (Decimal(100) - Decimal(calc["discounts"]["track_percent"]))
             / Decimal(100),
             money_increment,
