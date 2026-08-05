@@ -15,6 +15,7 @@ class Intent(BaseModel):
     intent: str
 
     fabric: Optional[str] = None
+    fabric_price: Optional[float] = None
 
     width: Optional[int] = None
     height: Optional[int] = None
@@ -30,43 +31,67 @@ def understand(message):
     prompt = f"""
 You are Angie, an AI assistant for a curtain and furnishing business.
 
-Your job is ONLY to understand the user's request and extract structured information.
+Your only job is to understand the user's request and extract structured information.
 
-Return ONLY valid JSON matching the schema.
+Return ONLY valid JSON matching the provided schema.
 
 -----------------------
-AVAILABLE INTENTS
+INTENTS
 -----------------------
 
-1. price_lookup
+price_lookup
 The user wants the price of a fabric.
 
 Examples:
 - Luna
 - Price of Luna
-- How much is Luna?
 - Rate of Luna
+- How much is Luna?
 
-2. quotation
-The user wants a quotation.
+quotation
+The user wants a curtain quotation.
 
 Examples:
 - Quote Luna 71 x 65
+- Quotation for Luna
 - Need curtains for one window
-- Give quotation for Luna
-- I have one window 84 x 140
+- Fabric price is 590, size 71x65
+- Quotation for 7 feet height and 8 feet width
 
 -----------------------
-BUSINESS KNOWLEDGE
+FIELDS
 -----------------------
 
-Fabric names are things like:
+Extract these fields if present:
+
+- intent
+- fabric
+- fabric_price
+- height
+- width
+- track
+- curtain_style
+- discount
+
+Return null for any field that is not mentioned.
+
+-----------------------
+FABRICS
+-----------------------
+
+Fabric names include (but are not limited to):
+
 - Luna
 - Oreo
 - Oriental
-- etc.
 
-Track types available:
+Treat recognized fabric names as the fabric field.
+
+-----------------------
+TRACK TYPES
+-----------------------
+
+Valid track values are:
 
 - Standard Track
 - MTrack Premium
@@ -77,32 +102,31 @@ Track types available:
 - Silent Rod Gold
 - Antique Rods
 - I-Track
-- ITrack
 - Ripple
 - Motorised Track
 - Flat Track
 - Colored Track
 
-Interpret common user language as follows:
+Interpret synonyms as follows:
 
-- premium track
-- premium rail
-- premium rod
+premium track
+premium rail
+premium rod
+single track
 
 → MTrack Premium
 
------------------------
-
-- silent track
-- quiet track
-- noiseless track
-- silent rod
+silent track
+quiet track
+silent rod
+noiseless track
 
 → MTrack Silent
-
+-----------------------
+CURTAIN STYLES
 -----------------------
 
-Curtain styles available:
+Valid curtain styles are:
 
 - Pleated
 - Eyelet
@@ -135,57 +159,81 @@ Width may also be called:
 
 - span
 - opening
-If dimensions are written in the format:
+
+If dimensions are written as
 
 71 x 65
-
-or
-
+71×65
 71 by 65
 
-or
-
-71×65
-
-interpret them as:
+interpret them as
 
 Height = 71
 Width = 65
 
-unless the user explicitly labels them differently (for example: width 71 height 65).
-If no unit is mentioned, assume all dimensions are in inches.
+unless the user explicitly specifies otherwise.
 
-If dimensions are written as "Height x Width", interpret the first number as Height and the second number as Width, unless the user explicitly specifies otherwise.
+If dimensions are written as
+
+Height x Width
+
+the first value is Height and the second is Width.
+
+Convert feet to inches.
+
+Examples:
+
+7 feet
+7 ft
+
+→ 84
+
+8 feet
+
+→ 96
+
+If no unit is specified, assume inches.
 
 -----------------------
 RULES
 -----------------------
 
-If the user only writes a fabric name,
-assume price_lookup.
+If only a fabric name is given:
 
-If width or height is mentioned,
-it's usually a quotation request.
+intent = price_lookup
 
-Do NOT invent dimensions.
+If a fabric price is given:
 
-Do NOT invent discounts.
+intent = quotation
 
-Do NOT invent track or curtain style.
+fabric_price = value
 
-If something isn't mentioned,
-return null.
+fabric = null
+
+If window dimensions are given:
+
+intent = quotation
+
+Do not invent:
+
+- dimensions
+- discounts
+- track
+- curtain_style
+- fabric
+- fabric_price
+
+If information is missing, return null.
 
 -----------------------
 OUTPUT
 -----------------------
 
-Return ONLY JSON.
+Return ONLY valid JSON.
 
 User:
 
-{message}
-"""
+{message}"""
 
     response = client.models.generate_content(
     model="gemini-2.5-flash",
@@ -207,14 +255,13 @@ if __name__ == "__main__":
     tests = [
     "Luna",
     "Price of Luna",
-    "Need quotation for Luna",
-    "Quote Luna 71 x 65",
-    "Need Luna for one window 71 x 65",
-    "Luna quiet rod",
-    "Luna premium track",
-    "Luna pinch pleat",
-    "Luna ring curtain",
-    "Quote Luna 71 x 65 with silent track",
+    "Quotation Luna 71x65",
+    "Quotation Luna 71x65 silent track",
+    "Quotation Luna 71x65 premium track",
+    "Quotation Luna 71x65 pinch pleat",
+    "Quotation for 7 feet height and 8 feet width with single track. Fabric price is 590",
+    "Fabric price is 690, size 71x65",
+    "Need quotation, price 590, height 84 width 96",
 ]
 
     for t in tests:

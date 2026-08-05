@@ -28,3 +28,18 @@ def search_fabric(query):
             })
 
     return results
+
+
+if __name__ == "__main__":
+
+    quality_index = headers.index("Quality")
+
+    counts = {}
+
+    for row in rows:
+        quality = row[quality_index]
+        counts[quality] = counts.get(quality, 0) + 1
+
+    for quality, count in sorted(counts.items()):
+        if count == 1:
+            print(quality)

@@ -77,74 +77,77 @@ def webhook():
             print("Unsupported message type.")
         result = understand(message)
         print(result)
-
         reply = ""
-
         if result["intent"] == "price_lookup":
-
             matches = search_fabric(result["fabric"])
-
             print("Matches:", matches)
-
             if matches:
-
                 for fabric in matches:
-
                     reply += (
                         f"Album: {fabric['album']}\n"
                         f"Quality: {fabric['quality']}\n"
                         f"Price: ₹{fabric['price']}/m\n"
                         f"Width: {fabric['width']} inches\n\n"
                     )
-
             else:
                 reply = "Sorry, I couldn't find that fabric."
         elif result["intent"] == "quotation":
-
-            matches = search_fabric(result["fabric"])
-
-            if not matches:
-                reply = "Sorry, I couldn't find that fabric."
-
+            # Check required dimensions
+            if result["height"] is None or result["width"] is None:
+                reply = "Please provide the window height and width."
             else:
-
-                fabric = matches[0]
-
-                width = int(fabric["width"].replace('"', "").strip())
-
-                quote = calculate_curtain_quote(
-                    QuotationInput(
-                        curtain_type=(
-                            "Main 54"
-                            if width == 54
-                            else "Main 48"
+                # -----------------------------
+                # Resolve fabric
+                # -----------------------------
+                fabric = None
+                if result["fabric"] is not None:
+                    matches = search_fabric(result["fabric"])
+                    if not matches:
+                        reply = "Sorry, I couldn't find that fabric."
+                    else:
+                        fabric = matches[0]
+                elif result["fabric_price"] is not None:
+                    # Temporary default width until AI extracts it
+                    DEFAULT_FABRIC_WIDTH = "48"
+                    fabric = {
+                        "price": result["fabric_price"],
+                        "width": DEFAULT_FABRIC_WIDTH,
+                    }
+                else:
+                    reply = "Please provide the fabric name or the fabric price."
+                # -----------------------------
+                # Calculate quotation
+                # -----------------------------
+                if fabric is not None:
+                    width = int(fabric["width"])
+                    quote = calculate_curtain_quote(
+                        QuotationInput(
+                            curtain_type=(
+                                "Main 54"
+                                if width == 54
+                                else "Main 48"
+                            ),
+                            track_type=result["track"] or "MTrack Premium",
+                            curtain_style=result["curtain_style"] or "Pleated",
+                            height_inches=Decimal(result["height"]),
+                            width_inches=Decimal(result["width"]),
+                            fabric_price_per_meter=Decimal(fabric["price"]),
                         ),
-                        track_type=result["track"] or "MTrack Premium",
-                        curtain_style=result["curtain_style"] or "Pleated",
-                        height_inches=Decimal(result["height"]),
-                        width_inches=Decimal(result["width"]),
-                        fabric_price_per_meter=Decimal(fabric["price"]),
-                    ),
-                    quote_config,
-)
-
-            reply = (
-                f"Quotation\n\n"
-                f"Fabric: ₹{quote.total_fabric_cost}\n"
-                f"Track: ₹{quote.total_track_cost}\n"
-                f"Stitching: ₹{quote.total_stitching_cost}\n"
-                f"Fitting: ₹{quote.fitting_charges}\n"
-                f"GST: ₹{quote.gst_total}\n\n"
-                f"Grand Total: ₹{quote.grand_total}"
-            )
+                        quote_config,
+                    )
+                    reply = (
+                        f"Quotation\n\n"
+                        f"Fabric: ₹{quote.total_fabric_cost}\n"
+                        f"Track: ₹{quote.total_track_cost}\n"
+                        f"Stitching: ₹{quote.total_stitching_cost}\n"
+                        f"Fitting: ₹{quote.fitting_charges}\n"
+                        f"GST: ₹{quote.gst_total}\n\n"
+                        f"Grand Total: ₹{quote.grand_total}"
+                    )
         else:   
             reply = "Sorry, I didn't understand your request."
-
         send_message(phone, reply)
-
-
         return "OK", 200
-
     except Exception as e:
         import traceback
         traceback.print_exc()
