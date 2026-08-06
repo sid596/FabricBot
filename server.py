@@ -99,40 +99,65 @@ def webhook():
                 # -----------------------------
                 # Resolve fabric
                 # -----------------------------
+            
+                order_type = result["order_type"] or "full"
+
                 fabric = None
-                if result["fabric"] is not None:
-                    matches = search_fabric(result["fabric"])
-                    if not matches:
-                        reply = "Sorry, I couldn't find that fabric."
-                    else:
-                        fabric = matches[0]
-                elif result["fabric_price"] is not None:
-                    # Temporary default width until AI extracts it
-                    DEFAULT_FABRIC_WIDTH = "48"
-                    fabric = {
-                        "price": result["fabric_price"],
-                        "width": DEFAULT_FABRIC_WIDTH,
-                    }
+
+                if order_type != "track_only":
+
+                    if result["fabric"] is not None:
+
+                        matches = search_fabric(result["fabric"])
+
+                        if not matches:
+                            reply = "Sorry, I couldn't find that fabric."
+
+                        else:
+                            fabric = matches[0]
+
+                    elif result["fabric_price"] is not None:
+
+                        DEFAULT_FABRIC_WIDTH = "48"
+
+                        fabric = {
+                            "price": result["fabric_price"],
+                            "width": DEFAULT_FABRIC_WIDTH,
+                        }
+
                 else:
                     reply = "Please provide the fabric name or the fabric price."
-                # -----------------------------
-                # Calculate quotation
-                # -----------------------------
-                if fabric is not None:
-                    width = int(fabric["width"])
+                if reply == "":
                     quote = calculate_curtain_quote(
                         QuotationInput(
-                            curtain_type=(
-                                "Main 54"
-                                if width == 54
-                                else "Main 48"
-                            ),
+                            fabric_width_inches=Decimal(
+                                    "0"
+                                    if order_type == "track_only"
+                                    else fabric["width"]
+                                ),
                             track_type=result["track"] or "MTrack Premium",
-                            curtain_style=result["curtain_style"] or "Pleated",
+                            curtain_style=(
+                                ""
+                                if order_type == "track_only"
+                                else (result["curtain_style"] or "Pleated")
+                            ),
+
                             height_inches=Decimal(result["height"]),
+
                             width_inches=Decimal(result["width"]),
-                            fabric_price_per_meter=Decimal(fabric["price"]),
-                            order_type=result["order_type"] or "full",
+
+                            fabric_price_per_meter=Decimal(
+
+                                "0"
+
+                                if order_type == "track_only"
+
+                                else fabric["price"]
+
+                            ),
+
+                            order_type=order_type,
+
                         ),
                         quote_config,
                     )

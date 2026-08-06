@@ -6,6 +6,7 @@
     "panel_count_rounding": "nearest",
     "fabric_rounding_increment_meters": 1,
     "track_length_rounding_feet": 1,
+    "default_fullness": 2.4,
     "fitting": {
 
     "charge_per_unit": 250,
@@ -21,31 +22,13 @@
     "track_percent": 30,
     "stitching_percent": 50
 },
-    "default_track": "MTrack Premium",
+  "default_track": "MTrack Premium",
 	"default_style": "Pleated",
 	"gst": {
     "fabric": 5,
     "stitching": 5,
     "track": 18,
     "fitting": 18
-}
-  },
-  "curtain_types": {
-    "Main 48": {
-    "fabric_width_inches": 48,
-    "finished_panel_width_inches": 20
-},
-"Main 54": {
-    "fabric_width_inches": 54,
-    "finished_panel_width_inches": 22.5
-},
-"Sheer 48": {
-    "fabric_width_inches": 48,
-    "finished_panel_width_inches": 20
-},
-"Sheer 54": {
-    "fabric_width_inches": 54,
-    "finished_panel_width_inches": 22.5
 }
   },
   "track_rates_per_running_foot": {
