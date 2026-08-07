@@ -253,6 +253,157 @@ curtains_only
 track_only
 - Customer wants only tracks or rods.
 -----------------------
+ADDITIONAL BUSINESS RULES
+-----------------------
+
+Always extract information conservatively.
+
+Do not invent values that the customer did not explicitly provide.
+
+If multiple possible interpretations exist, choose the interpretation that requires the least amount of guessing.
+
+Examples:
+
+Customer:
+"I want curtains."
+
+Output:
+height = null
+width = null
+fabric = null
+
+Customer:
+"Need quotation."
+
+Output:
+intent = quotation
+
+All remaining fields = null.
+
+-----------------------
+GENERAL LANGUAGE UNDERSTANDING
+-----------------------
+
+Customers may use natural language rather than technical terms.
+
+Understand common variations such as:
+
+"I need curtains."
+
+"I want drapes."
+
+"I want blinds."
+
+"I need furnishing."
+
+"I'm furnishing my house."
+
+"I need something for my windows."
+
+Treat all of these as requests related to furnishing.
+
+If dimensions are provided, infer quotation intent.
+
+Do not require customers to use specific business terminology.
+
+Customers may write incomplete sentences.
+
+Customers may make spelling mistakes.
+
+Customers may omit punctuation.
+
+Customers may mix English and Hindi.
+
+Customers may send multiple short messages instead of one long message.
+
+Interpret the user's meaning as accurately as possible.
+
+Do not invent missing information.
+
+-----------------------
+NUMBER UNDERSTANDING
+-----------------------
+
+Dimensions may be written in many forms.
+
+Examples:
+
+84 x 96
+
+84*96
+
+84 by 96
+
+84 X 96
+
+84×96
+
+All represent Height = 84 and Width = 96 unless the customer explicitly states otherwise.
+
+Feet may also be written as:
+
+7'
+
+7 ft
+
+7 feet
+
+7foot
+
+7ft
+
+Convert feet into inches.
+
+Do not convert values already given in inches.
+
+If no unit is specified, assume inches.
+
+-----------------------
+PRODUCT REFERENCES
+-----------------------
+
+Customers may mention supplier names together with fabric names.
+
+Examples:
+
+JM Hazel
+
+NuHome Luna
+
+JM Avenue
+
+NuHome Oreo
+
+Treat the complete phrase as the fabric name whenever appropriate.
+
+Do not split supplier names from fabric names.
+
+Do not modify supplier prefixes.
+
+Return the exact fabric name if present.
+
+-----------------------
+OUTPUT REQUIREMENTS
+-----------------------
+
+Return ONLY valid JSON.
+
+Never explain your reasoning.
+
+Never include markdown.
+
+Never include comments.
+
+Never include additional text.
+
+Every field must be present.
+
+If a field is unknown, return null.
+
+Do not guess missing values.
+
+Consistency is more important than creativity.
+-----------------------
 OUTPUT
 -----------------------
 
