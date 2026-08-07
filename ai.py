@@ -428,6 +428,17 @@ Return ONLY valid JSON.
         "cached_content": cache.name
     }
 )
+    usage = response.usage_metadata
+
+    print(
+
+    f"Prompt: {usage.prompt_token_count} | "
+
+    f"Output: {usage.candidates_token_count} | "
+
+    f"Total: {usage.total_token_count}"
+
+)
     # print("TEXT:")
     # print(response.text)
 
