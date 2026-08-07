@@ -114,6 +114,8 @@ def webhook():
                             reply = "Sorry, I couldn't find that fabric."
 
                         else:
+
+                            
                             fabric = matches[0]
 
                     elif result["fabric_price"] is not None:

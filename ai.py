@@ -79,12 +79,11 @@ Return null for any field that is not mentioned.
 FABRICS
 -----------------------
 
-Fabric names include (but are not limited to):
+Fabric names include the fabric and the supplier(like Nuhome, JM, SNN, Rivee, etc) (but are not limited to):
 
-- Luna
-- Oreo
-- Oriental
-
+For ex:
+NuHome Luna
+JM Luna
 Treat recognized fabric names as the fabric field.
 
 -----------------------
@@ -264,7 +263,7 @@ User:
 {message}"""
 
     response = client.models.generate_content(
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     contents=prompt,
     config={
         "response_mime_type": "application/json",
