@@ -9,7 +9,7 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
-from typing import Optional
+from typing import Optional, types
 
 class Intent(BaseModel):
     intent: str
@@ -28,7 +28,7 @@ class Intent(BaseModel):
 
 def understand(message):
 
-    prompt = f"""
+    knowledge = f"""
 You are Angie, an AI assistant for a curtain and furnishing business.
 
 Your only job is to understand the user's request and extract structured information.
@@ -258,16 +258,23 @@ OUTPUT
 
 Return ONLY valid JSON.
 
-User:
-
-{message}"""
-
+"""
+    # Cache
+    cache = client.caches.create(
+        model = "gemini-2.5-flash",
+        config = genai.types.CreateCachedContentConfig(
+            display_name="furnishing0calculation-rules-v1", 
+            system_instruction = knowledge,
+            ttl = "86400s"
+        ))
+    # response
     response = client.models.generate_content(
     model="gemini-2.5-flash",
-    contents=prompt,
+    contents = message,
     config={
         "response_mime_type": "application/json",
         "response_schema": Intent,
+        "cached_content": cache.name
     }
 )
     # print("TEXT:")
