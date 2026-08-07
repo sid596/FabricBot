@@ -435,10 +435,11 @@ Return ONLY valid JSON.
     f"Prompt: {usage.prompt_token_count} | "
 
     f"Output: {usage.candidates_token_count} | "
-
+    
     f"Total: {usage.total_token_count}"
 
 )
+    print(f"Cached Tokens : {getattr(usage, 'cached_content_token_count', 0)}")
     # print("TEXT:")
     # print(response.text)
 
