@@ -125,8 +125,8 @@ def webhook():
                             "width": DEFAULT_FABRIC_WIDTH,
                         }
 
-                else:
-                    reply = "Please provide the fabric name or the fabric price."
+                    else:
+                        reply = "Please provide the fabric name or the fabric price."
                 if reply == "":
                     quote = calculate_curtain_quote(
                         QuotationInput(
