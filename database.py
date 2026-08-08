@@ -1,5 +1,5 @@
 import sqlite3
-
+from conversation import ConversationState
 DB_NAME = "fabricbot.db"
 
 
@@ -21,9 +21,7 @@ def init_db():
 
         phone TEXT UNIQUE,
 
-        goal TEXT,
-
-        status TEXT,
+        state TEXT,
 
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -78,3 +76,70 @@ def get_or_create_conversation(phone):
         "status": "active"
 
     }
+
+def get_conversation(phone):
+
+    conn = get_connection()
+
+    cur = conn.cursor()
+
+    cur.execute(
+
+        "SELECT * FROM conversations WHERE phone=?",
+
+        (phone,)
+
+    )
+
+    row = cur.fetchone()
+
+    conn.close()
+
+    if not row:
+
+        return None
+
+    state = ConversationState.from_json(row["state"])
+
+    return state
+
+
+
+
+def save_conversation(phone, state):
+
+    conn = get_connection()
+
+    cur = conn.cursor()
+
+    cur.execute("""
+
+    INSERT INTO conversations(phone,state)
+
+    VALUES(?,?)
+
+    ON CONFLICT(phone)
+
+    DO UPDATE SET
+
+        state=?,
+
+        updated_at=CURRENT_TIMESTAMP
+
+    """,
+
+    (
+
+        phone,
+
+        state.to_json(),
+
+        state.to_json()
+
+    )
+
+    )
+
+    conn.commit()
+
+    conn.close()
