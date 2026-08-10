@@ -4,12 +4,10 @@ from pathlib import Path
 
 DB_NAME = str(Path(__file__).resolve().parent / "fabricbot.db")
 
-
 def get_connection():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def init_db():
 
@@ -33,9 +31,22 @@ def init_db():
     """)
 
     conn.commit()
+
+    migrate_db(conn)
+
     conn.close()
+def migrate_db(conn):
 
+    cur = conn.cursor()
 
+    cur.execute("PRAGMA table_info(conversations)")
+    columns = [row[1] for row in cur.fetchall()]
+
+    if "state" not in columns:
+        print("Migrating database: adding state column...")
+        cur.execute("ALTER TABLE conversations ADD COLUMN state TEXT")
+
+    conn.commit()
 
 def get_conversation(phone):
 
