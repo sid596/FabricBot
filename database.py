@@ -1,6 +1,8 @@
 import sqlite3
 from conversation import ConversationState
-DB_NAME = "fabricbot.db"
+from pathlib import Path
+
+DB_NAME = str(Path(__file__).resolve().parent / "fabricbot.db")
 
 
 def get_connection():
