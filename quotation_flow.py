@@ -38,7 +38,13 @@ def handle_quotation(
 
         if q.fabric is not None:
 
+            print("===== QUOTATION STATE =====")
+            print(q)
+            print("Stored fabric:", q.fabric)
+
             matches = search_fabric(q.fabric)
+
+            print("Matches:", matches)
 
             if not matches:
                 return FlowResult(
