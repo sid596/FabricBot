@@ -185,6 +185,8 @@ def update_conversation(
             start_new_quotation(state)
 
         merge_quotation(state, result)
+        print("===== AFTER MERGE =====")
+        print(state.quotation)
 
     return state
 
