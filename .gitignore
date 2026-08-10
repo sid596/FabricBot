@@ -4,3 +4,6 @@ fabricbot.json
 __pycache__/
 *.pyc
 venv/
+fabricbot.db
+
+temp/
