@@ -34,72 +34,38 @@ def init_db():
     conn.close()
 
 
-def get_or_create_conversation(phone):
+
+def get_conversation(phone):
 
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT * FROM conversations WHERE phone=?",
-        (phone,)
+        "SELECT state FROM conversations WHERE phone=?",
+        (phone,),
     )
 
     row = cur.fetchone()
 
     if row:
-
         conn.close()
-        return dict(row)
+        return ConversationState.from_json(row["state"])
+
+    state = ConversationState()
 
     cur.execute(
         """
-        INSERT INTO conversations
-        (phone,status)
-
-        VALUES (?,?)
+        INSERT INTO conversations(phone,state)
+        VALUES(?,?)
         """,
-        (phone, "active")
+        (
+            phone,
+            state.to_json(),
+        ),
     )
 
     conn.commit()
-
-    conversation_id = cur.lastrowid
-
     conn.close()
-
-    return {
-
-        "id": conversation_id,
-
-        "phone": phone,
-
-        "status": "active"
-
-    }
-
-def get_conversation(phone):
-
-    conn = get_connection()
-
-    cur = conn.cursor()
-
-    cur.execute(
-
-        "SELECT * FROM conversations WHERE phone=?",
-
-        (phone,)
-
-    )
-
-    row = cur.fetchone()
-
-    conn.close()
-
-    if not row:
-
-        return None
-
-    state = ConversationState.from_json(row["state"])
 
     return state
 
@@ -143,3 +109,5 @@ def save_conversation(phone, state):
     conn.commit()
 
     conn.close()
+
+

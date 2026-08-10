@@ -29,24 +29,50 @@ class QuotationInput:
 
 @dataclass(frozen=True)
 class QuotationResult:
-    fabric_width_inches: float    
-    track_type: str
+
+    # Window
+    window_height_inches: float
+    window_width_inches: float
+
+    # Fabric
+    fabric_width_inches: float
+    fabric_price_per_meter: float
+
+    # Curtain
     curtain_style: str
+    track_type: str
+    fullness: float
     fold_margin_inches: float
+
+    # Panel calculation
+    finished_coverage_per_panel_inches: float
     number_of_panels: int
+
+    # Fabric calculation
+    raw_meters_per_panel: float
     meters_per_panel: float
     total_fabric_meters: float
-    fabric_price_per_meter: float
+
+    # Costs
     total_fabric_cost: int
+
     stitching_rate_per_panel: int
     total_stitching_cost: int
+
     track_length_feet: float
     track_rate_per_foot: int
     total_track_cost: int
+
     fitting_sections: int
     fitting_charges: int
-    grand_total: int
+
+    fabric_discount_percent: float
+    track_discount_percent: float
+    stitching_discount_percent: float
+
     gst_total: int
+    
+    grand_total: int
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -163,10 +189,11 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         meters_per_panel = Decimal(0)
         total_fabric_meters = Decimal(0)
         stitching_rate = Decimal(0)
-
         fabric_cost = 0
         stitching_cost = 0
-
+        fullness = Decimal(0)
+        finished_coverage = Decimal(0)
+        raw_meters_per_panel = Decimal(0)
     if has_track:
         if data.track_type not in tracks:
             raise ValueError(f"Unknown track/rod type: {data.track_type}")
@@ -249,23 +276,51 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     money_increment,
 )
     return QuotationResult(
+
+    # Window
+    window_height_inches=float(data.height_inches),
+    window_width_inches=float(data.width_inches),
+
+    # Fabric
     fabric_width_inches=float(fabric_width),
-    track_type=data.track_type,
+    fabric_price_per_meter=float(data.fabric_price_per_meter),
+
+    # Curtain
     curtain_style=data.curtain_style,
+    track_type=data.track_type,
+    fullness=float(fullness),
     fold_margin_inches=float(margin),
+
+    # Panel calculation
+    finished_coverage_per_panel_inches=float(finished_coverage),
     number_of_panels=panels,
+
+    # Fabric calculation
+    raw_meters_per_panel=float(raw_meters_per_panel),
     meters_per_panel=float(meters_per_panel),
     total_fabric_meters=float(total_fabric_meters),
-    fabric_price_per_meter=float(data.fabric_price_per_meter),
+
+    # Costs
     total_fabric_cost=fabric_cost,
+
     stitching_rate_per_panel=int(stitching_rate),
     total_stitching_cost=stitching_cost,
+
     track_length_feet=float(track_feet),
     track_rate_per_foot=int(track_rate),
     total_track_cost=track_cost,
+
     fitting_sections=fitting_units,
     fitting_charges=fitting_charges,
+
+    fabric_discount_percent=float(calc["default_fabric_discount_percent"]),
+
+    track_discount_percent=float(calc["discounts"]["track_percent"]),
+
+    stitching_discount_percent=float(calc["discounts"]["stitching_percent"]),
+
     gst_total=gst_total,
+
     grand_total=
         fabric_cost
         + stitching_cost

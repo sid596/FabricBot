@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import json
 from pydantic import BaseModel
+from conversation import expected_field
 load_dotenv()
 
 client = genai.Client(
@@ -26,8 +27,25 @@ class Intent(BaseModel):
     discount: Optional[float] = None
     order_type: Optional[str] = None
 
-def understand(message):
+def understand(message, state=None):
+    
+    context = ""
+    if state is not None:
 
+        waiting_for = expected_field(state)
+
+        if waiting_for:
+
+            context = f"""
+    Current conversation state
+
+    The customer is currently answering the following question:
+
+    {waiting_for}
+
+    Interpret their next message primarily as this field unless they clearly start a completely different request.
+    """
+            
     knowledge = f"""
 You are Angie, an AI assistant for a curtain and furnishing business.
 
@@ -421,7 +439,7 @@ Return ONLY valid JSON.
     # response
     response = client.models.generate_content(
     model="gemini-2.5-flash",
-    contents = message,
+    contents=context + "\n\nUser:\n" + message,
     config={
         "response_mime_type": "application/json",
         "response_schema": Intent,

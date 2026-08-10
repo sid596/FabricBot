@@ -1,14 +1,19 @@
 from flask import Flask, request
 from ai import understand
-from quotation import calculate_curtain_quote, QuotationInput
 from search import search_fabric
 from whatsapp import send_message
 from images import download_image
 from vision import extract_code
 from quotation import load_config
-from decimal import Decimal
 app = Flask(__name__)
-from database import init_db, get_or_create_conversation
+from database import (
+    init_db,
+    get_conversation,
+    save_conversation,
+)
+from conversation import update_conversation
+from quotation_flow import handle_quotation
+
 
 init_db()
 quote_config = load_config("config.json")
@@ -43,8 +48,11 @@ def webhook():
         message_data = value["messages"][0]
 
         phone = message_data["from"]
-        conversation = get_or_create_conversation(phone)
-        print(conversation)
+
+        state = get_conversation(phone)
+
+        print(state)
+        
         message_type = message_data["type"]
 
         print(f"Phone: {phone}")
@@ -75,8 +83,9 @@ def webhook():
             print(message)
         else:
             print("Unsupported message type.")
-        result = understand(message)
+        result = understand(message, state)
         print(result)
+        state = update_conversation(state, result)
         reply = ""
         if result["intent"] == "price_lookup":
             matches = search_fabric(result["fabric"])
@@ -92,88 +101,21 @@ def webhook():
             else:
                 reply = "Sorry, I couldn't find that fabric."
         elif result["intent"] == "quotation":
-            # Check required dimensions
-            if result["height"] is None or result["width"] is None:
-                reply = "Please provide the window height and width."
-            else:
-                # -----------------------------
-                # Resolve fabric
-                # -----------------------------
+
+            flow = handle_quotation(
+                state,
+                quote_config,
+            )
+
+            reply = flow.reply
+
+            if flow.completed:
+                state.completed = True
+                
             
-                order_type = result["order_type"] or "full"
-
-                fabric = None
-
-                if order_type != "track_only":
-
-                    if result["fabric"] is not None:
-
-                        matches = search_fabric(result["fabric"])
-
-                        if not matches:
-                            reply = "Sorry, I couldn't find that fabric."
-
-                        else:
-
-                            
-                            fabric = matches[0]
-
-                    elif result["fabric_price"] is not None:
-
-                        DEFAULT_FABRIC_WIDTH = "48"
-
-                        fabric = {
-                            "price": result["fabric_price"],
-                            "width": DEFAULT_FABRIC_WIDTH,
-                        }
-
-                    else:
-                        reply = "Please provide the fabric name or the fabric price."
-                if reply == "":
-                    quote = calculate_curtain_quote(
-                        QuotationInput(
-                            fabric_width_inches=Decimal(
-                                    "0"
-                                    if order_type == "track_only"
-                                    else fabric["width"]
-                                ),
-                            track_type=result["track"] or "MTrack Premium",
-                            curtain_style=(
-                                ""
-                                if order_type == "track_only"
-                                else (result["curtain_style"] or "Pleated")
-                            ),
-
-                            height_inches=Decimal(result["height"]),
-
-                            width_inches=Decimal(result["width"]),
-
-                            fabric_price_per_meter=Decimal(
-
-                                "0"
-
-                                if order_type == "track_only"
-
-                                else fabric["price"]
-
-                            ),
-
-                            order_type=order_type,
-
-                        ),
-                        quote_config,
-                    )
-                    reply = (
-                        f"Quotation\n\n"
-                        f"Fabric: ₹{quote.total_fabric_cost}\n"
-                        f"Track: ₹{quote.total_track_cost}\n"
-                        f"Stitching: ₹{quote.total_stitching_cost}\n"
-                        f"Fitting: ₹{quote.fitting_charges}\n"
-                        f"GST: ₹{quote.gst_total}\n\n"
-                        f"Grand Total: ₹{quote.grand_total}"
-                    )
         else:   
             reply = "Sorry, I didn't understand your request."
+        save_conversation(phone, state)
         send_message(phone, reply)
         return "OK", 200
     except Exception as e:

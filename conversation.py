@@ -18,6 +18,11 @@ REQUIRED_FIELDS = (
     "height",
 
 )
+QUESTION_MAP = {
+    "fabric": "Which fabric would you like to use?",
+    "height": "What is the window height (in inches or feet)?",
+    "width": "What is the window width (in inches or feet)?",
+}
 
 @dataclass
 class QuotationState:
@@ -158,3 +163,27 @@ def update_conversation(
 
 def is_quote_complete(state: ConversationState) -> bool:
     return len(find_missing_fields(state)) == 0
+
+def next_question(state: ConversationState) -> Optional[str]:
+    """
+    Returns the next question to ask the customer,
+    or None if the quotation has all required information.
+    """
+
+    missing = find_missing_fields(state)
+
+    if not missing:
+        return None
+
+    return QUESTION_MAP.get(
+        missing[0],
+        f"Please provide {missing[0]}.",
+    )
+
+def expected_field(state: ConversationState) -> Optional[str]:
+    missing = find_missing_fields(state)
+
+    if not missing:
+        return None
+
+    return missing[0]
