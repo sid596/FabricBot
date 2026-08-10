@@ -105,12 +105,39 @@ def merge_quotation(
     state: ConversationState,
     result: dict,
 ) -> ConversationState:
+
     if state.quotation is None:
         state.quotation = QuotationState()
 
     q = state.quotation
 
-    for field in QUOTE_FIELDS:
+    # ----------------------------
+    # Fabric always wins
+    # ----------------------------
+    if result.get("fabric") is not None:
+        q.fabric = result["fabric"]
+        q.fabric_price = None
+
+    # ----------------------------
+    # Manual price only if no fabric selected
+    # ----------------------------
+    if (
+        result.get("fabric_price") is not None
+        and q.fabric is None
+    ):
+        q.fabric_price = result["fabric_price"]
+
+    # ----------------------------
+    # Merge remaining fields
+    # ----------------------------
+    for field in (
+        "width",
+        "height",
+        "track",
+        "curtain_style",
+        "discount",
+        "order_type",
+    ):
         value = result.get(field)
         if value is not None:
             setattr(q, field, value)
