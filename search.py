@@ -9,8 +9,9 @@ for i, header in enumerate(headers):
 
 def search_fabric(query):
 
-    query = query.lower()
-    print("Searching for:", query)
+    query = query.lower().strip()
+
+    print("Searching for:", repr(query))
 
     results = []
 

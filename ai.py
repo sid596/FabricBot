@@ -9,82 +9,7 @@ load_dotenv()
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
-
-from typing import Optional, types
-
-class Intent(BaseModel):
-    intent: str
-
-    fabric: Optional[str] = None
-    fabric_price: Optional[float] = None
-
-    width: Optional[int] = None
-    height: Optional[int] = None
-
-    track: Optional[str] = None
-    curtain_style: Optional[str] = None
-
-    discount: Optional[float] = None
-    order_type: Optional[str] = None
-
-def understand(message, state=None):
-    message = message.strip()
-
-    if state is not None:
-        waiting_for = expected_field(state)
-
-        if waiting_for is not None:
-
-            # Width / Height
-            if waiting_for in ("width", "height"):
-                try:
-                    value = int(message)
-
-                    return {
-                        "intent": "quotation",
-                        "fabric": None,
-                        "fabric_price": None,
-                        "width": value if waiting_for == "width" else None,
-                        "height": value if waiting_for == "height" else None,
-                        "track": None,
-                        "curtain_style": None,
-                        "discount": None,
-                        "order_type": None,
-                    }
-
-                except ValueError:
-                    pass
-            if waiting_for == "fabric":
-
-                return {
-                    "intent": "quotation",
-                    "fabric": message,
-                    "fabric_price": None,
-                    "width": None,
-                    "height": None,
-                    "track": None,
-                    "curtain_style": None,
-                    "discount": None,
-                    "order_type": None,
-                }
-    context = ""
-    if state is not None:
-
-        waiting_for = expected_field(state)
-
-        if waiting_for:
-
-            context = f"""
-    Current conversation state
-
-    The customer is currently answering the following question:
-
-    {waiting_for}
-
-    Interpret their next message primarily as this field unless they clearly start a completely different request.
-    """
-            
-    knowledge = f"""
+knowledge = """
 You are Angie, an AI assistant for a curtain and furnishing business.
 
 Your only job is to understand the user's request and extract structured information.
@@ -418,26 +343,83 @@ If no unit is specified, assume inches.
 PRODUCT REFERENCES
 -----------------------
 
-Customers may mention supplier names together with fabric names.
+Customers may mention fabric names inside normal conversation.
+
+Your job is to extract ONLY the fabric name, not the entire sentence.
 
 Examples:
 
-JM Hazel
+User:
+"I think let's see JM Hazel"
 
-NuHome Luna
+fabric = "JM Hazel"
 
-JM Avenue
+User:
+"Let's go with NuHome Luna"
 
-NuHome Oreo
+fabric = "NuHome Luna"
 
-Treat the complete phrase as the fabric name whenever appropriate.
+User:
+"Maybe Oreo Sheer"
 
-Do not split supplier names from fabric names.
+fabric = "Oreo Sheer"
 
-Do not modify supplier prefixes.
+User:
+"I want JM Avenue"
 
-Return the exact fabric name if present.
+fabric = "JM Avenue"
 
+Ignore conversational words such as:
+
+- I think
+- maybe
+- let's
+- let's go with
+- use
+- see
+- probably
+- I want
+- can we use
+- how about
+
+Return ONLY the fabric name.
+
+Do not split supplier prefixes from the fabric.
+
+Do not include extra words before or after the fabric name.
+-----------------------
+EXTRACTION RULES
+-----------------------
+
+Extract entities, not sentences.
+
+For every field, return only the value itself.
+
+Good:
+
+fabric = "JM Hazel"
+
+Bad:
+
+fabric = "I think let's see JM Hazel"
+
+Good:
+
+track = "MTrack Premium"
+
+Bad:
+
+track = "I want the MTrack Premium"
+
+Good:
+
+curtain_style = "Pleated"
+
+Bad:
+
+curtain_style = "Please make it pleated"
+
+Always remove surrounding conversational language.
 -----------------------
 OUTPUT REQUIREMENTS
 -----------------------
@@ -466,14 +448,90 @@ OUTPUT
 Return ONLY valid JSON.
 
 """
-    # Cache
-    cache = client.caches.create(
+cache = client.caches.create(
         model = "gemini-2.5-flash",
         config = genai.types.CreateCachedContentConfig(
-            display_name="furnishing0calculation-rules-v1", 
-            system_instruction = knowledge,
+        display_name="furnishing-rules-v2",
+        system_instruction = knowledge,
             ttl = "86400s"
         ))
+from typing import Optional, types
+
+class Intent(BaseModel):
+    intent: str
+
+    fabric: Optional[str] = None
+    fabric_price: Optional[float] = None
+
+    width: Optional[int] = None
+    height: Optional[int] = None
+
+    track: Optional[str] = None
+    curtain_style: Optional[str] = None
+
+    discount: Optional[float] = None
+    order_type: Optional[str] = None
+
+def understand(message, state=None):
+    message = message.strip()
+
+    if state is not None:
+        waiting_for = expected_field(state)
+
+        if waiting_for is not None:
+
+            # Width / Height
+            if waiting_for in ("width", "height"):
+                try:
+                    value = int(message)
+
+                    return {
+                        "intent": "quotation",
+                        "fabric": None,
+                        "fabric_price": None,
+                        "width": value if waiting_for == "width" else None,
+                        "height": value if waiting_for == "height" else None,
+                        "track": None,
+                        "curtain_style": None,
+                        "discount": None,
+                        "order_type": None,
+                    }
+
+                except ValueError:
+                    pass
+            if waiting_for == "fabric":
+
+                return {
+                    "intent": "quotation",
+                    "fabric": message,
+                    "fabric_price": None,
+                    "width": None,
+                    "height": None,
+                    "track": None,
+                    "curtain_style": None,
+                    "discount": None,
+                    "order_type": None,
+                }
+    context = ""
+    if state is not None:
+
+        waiting_for = expected_field(state)
+
+        if waiting_for:
+
+            context = f"""
+    Current conversation state
+
+    The customer is currently answering the following question:
+
+    {waiting_for}
+
+    Interpret their next message primarily as this field unless they clearly start a completely different request.
+    """
+            
+    
+    # Cache
+    
     # response
     response = client.models.generate_content(
     model="gemini-2.5-flash",
