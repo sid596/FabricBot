@@ -28,7 +28,45 @@ class Intent(BaseModel):
     order_type: Optional[str] = None
 
 def understand(message, state=None):
-    
+    message = message.strip()
+
+    if state is not None:
+        waiting_for = expected_field(state)
+
+        if waiting_for is not None:
+
+            # Width / Height
+            if waiting_for in ("width", "height"):
+                try:
+                    value = int(message)
+
+                    return {
+                        "intent": "quotation",
+                        "fabric": None,
+                        "fabric_price": None,
+                        "width": value if waiting_for == "width" else None,
+                        "height": value if waiting_for == "height" else None,
+                        "track": None,
+                        "curtain_style": None,
+                        "discount": None,
+                        "order_type": None,
+                    }
+
+                except ValueError:
+                    pass
+            if waiting_for == "fabric":
+
+                return {
+                    "intent": "quotation",
+                    "fabric": message,
+                    "fabric_price": None,
+                    "width": None,
+                    "height": None,
+                    "track": None,
+                    "curtain_style": None,
+                    "discount": None,
+                    "order_type": None,
+                }
     context = ""
     if state is not None:
 
