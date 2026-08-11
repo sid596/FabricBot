@@ -40,6 +40,7 @@ def handle_quotation(
 
             print("===== QUOTATION STATE =====")
             print(q)
+
             print("Stored fabric:", q.fabric)
 
             matches = search_fabric(q.fabric)
@@ -51,6 +52,8 @@ def handle_quotation(
                     reply="Sorry, I couldn't find that fabric."
                 )
 
+
+            
             fabric = matches[0]
 
         elif q.fabric_price is not None:

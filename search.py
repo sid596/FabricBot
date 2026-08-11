@@ -10,6 +10,7 @@ for i, header in enumerate(headers):
 def search_fabric(query):
 
     query = query.lower()
+    print("Searching for:", query)
 
     results = []
 
@@ -26,7 +27,7 @@ def search_fabric(query):
                 "price": row[header_index["Price"]],
                 "width": row[header_index["Width"]]
             })
-
+    print("Returning:", results)    
     return results
 
 
