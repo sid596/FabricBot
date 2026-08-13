@@ -549,17 +549,35 @@ The customer is currently being asked for:
 
 {waiting_for}
 
-If the user's next message is simply an answer to that question,
-extract ONLY that field.
+This means a quotation is already in progress and the customer's
+next message is expected to simply answer that pending question.
+
+IMPORTANT OVERRIDE:
+The general rule "a fabric name alone means intent = price_lookup"
+does NOT apply here. If the pending question is "fabric" and the
+customer's message reasonably answers it (a fabric name, with or
+without extra words), you MUST set intent = quotation, not
+price_lookup. Only fall back to price_lookup if the message clearly
+starts a brand new, unrelated request (see the HOWEVER section below).
+
+If the user's next message is simply an answer to the pending question,
+extract ONLY that field, and set intent to "quotation".
 
 Examples:
 
 Question: fabric
 User: JM Luna
+-> intent = quotation
 -> fabric = "JM Luna"
+
+Question: fabric
+User: NuHome Inara
+-> intent = quotation
+-> fabric = "NuHome Inara"
 
 Question: width
 User: 84
+-> intent = quotation
 -> width = 84
 
 HOWEVER
