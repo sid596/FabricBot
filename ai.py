@@ -520,7 +520,7 @@ def understand(message, state=None):
 
     if state is not None:
         waiting_for = expected_field(state)
-
+        print("EXPECTED FIELD:", waiting_for)
         if waiting_for is not None:
 
             # Width / Height

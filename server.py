@@ -83,6 +83,8 @@ def webhook():
             print(message)
         else:
             print("Unsupported message type.")
+        print("STATE BEFORE UNDERSTAND")
+        print(state)
         result = understand(message, state)
         print(result)
         state = update_conversation(state, result)
