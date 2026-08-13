@@ -162,6 +162,10 @@ def webhook():
             result["intent"] == "quotation"
             and state.active_task == "quotation"
             and not state.completed
+            and result.get("fabric") is None
+            and result.get("fabric_price") is None
+            and result.get("width") is None
+            and result.get("height") is None
         ):
             state.awaiting_confirmation = "new_quotation"
 
