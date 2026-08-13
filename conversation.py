@@ -179,14 +179,21 @@ def update_conversation(
     intent = result.get("intent")
     state.last_intent = intent
 
-    if intent == "quotation":
-
-        if not has_active_quotation(state):
+    if (intent == "quotation"):
+        if (
+    result.get("fabric") is None
+    and result.get("fabric_price") is None
+    and result.get("width") is None
+    and result.get("height") is None
+            ):
             start_new_quotation(state)
 
-        merge_quotation(state, result)
-        print("===== AFTER MERGE =====")
-        print(state.quotation)
+    elif not has_active_quotation(state):
+        start_new_quotation(state)
+
+    merge_quotation(state, result)
+    print("===== AFTER MERGE =====")
+    print(state.quotation)
 
     return state
 

@@ -40,6 +40,49 @@ Examples:
 - Quotation for 7 feet height and 8 feet width
 
 -----------------------
+CONVERSATION RESET
+-----------------------
+
+The latest user message always has priority over previous conversation context.
+
+If the user begins a new request,
+ignore any pending question from the previous flow.
+
+Examples:
+
+Previous question:
+Which fabric?
+
+User:
+I need a quotation.
+
+Output:
+
+intent = quotation
+
+fabric = null
+
+Previous question:
+What is the width?
+
+User:
+Price of JM Hazel
+
+Output:
+
+intent = price_lookup
+
+Previous question:
+Which fabric?
+
+User:
+Cancel
+
+Output:
+
+intent = cancel
+
+-----------------------
 FIELDS
 -----------------------
 
@@ -499,35 +542,51 @@ def understand(message, state=None):
 
                 except ValueError:
                     pass
-            if waiting_for == "fabric":
+    context = f"""
+Current conversation state:
 
-                return {
-                    "intent": "quotation",
-                    "fabric": message,
-                    "fabric_price": None,
-                    "width": None,
-                    "height": None,
-                    "track": None,
-                    "curtain_style": None,
-                    "discount": None,
-                    "order_type": None,
-                }
-    context = ""
-    if state is not None:
+The customer is currently being asked for:
 
-        waiting_for = expected_field(state)
+{waiting_for}
 
-        if waiting_for:
+If the user's next message is simply an answer to that question,
+extract ONLY that field.
 
-            context = f"""
-    Current conversation state
+Examples:
 
-    The customer is currently answering the following question:
+Question: fabric
+User: JM Luna
+-> fabric = "JM Luna"
 
-    {waiting_for}
+Question: width
+User: 84
+-> width = 84
 
-    Interpret their next message primarily as this field unless they clearly start a completely different request.
-    """
+HOWEVER
+
+If the user's latest message starts a NEW request,
+ignore the previous question completely
+and determine the intent from the latest message alone.
+
+Examples:
+
+Question: fabric
+User: I need a quotation
+-> intent = quotation
+-> fabric = null
+
+Question: width
+User: Price of JM Luna
+-> intent = price_lookup
+
+Question: height
+User: Cancel
+-> intent = cancel
+
+Question: fabric
+User: Start over
+-> intent = quotation
+"""
             
     
     # Cache
