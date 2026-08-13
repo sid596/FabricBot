@@ -87,9 +87,69 @@ def webhook():
 
         print("STATE BEFORE UNDERSTAND")
         print(state)
+# -----------------------------
+# Waiting for quotation confirmation
+# -----------------------------
+        if state.awaiting_confirmation == "new_quotation":
 
-        result = understand(message, state)
-        print(result)
+            choice = message.lower().strip()
+
+            if choice in [
+                "1",
+                "continue",
+                "continue quotation",
+                "continue this quotation",
+                "resume",
+                "yes",
+            ]:
+
+                state.awaiting_confirmation = None
+
+                flow = handle_quotation(
+                    state,
+                    quote_config,
+                )
+
+                save_conversation(phone, state)
+                send_message(phone, flow.reply)
+
+                return "OK", 200
+
+            elif choice in [
+                "2",
+                "new",
+                "new quotation",
+                "start new",
+                "start a new quotation",
+                "restart",
+            ]:
+
+                from conversation import reset_conversation, start_new_quotation
+
+                reset_conversation(state)
+                start_new_quotation(state)
+                flow = handle_quotation(
+        state,
+        quote_config,
+    )
+                state.awaiting_confirmation = None
+                save_conversation(phone, flow.reply)
+                send_message(phone, "Which fabric would you like to use?")
+
+                return "OK", 200
+
+            else:
+
+                send_message(
+                    phone,
+                    "Please reply with:\n"
+                    "1. Continue this quotation\n"
+                    "2. Start a new quotation"
+                )
+
+                return "OK", 200
+                result = understand(message, state)
+                print(result)
 
         # -----------------------------
         # User requested another quotation while one is already active
