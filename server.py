@@ -83,12 +83,39 @@ def webhook():
             print(message)
         else:
             print("Unsupported message type.")
+
+
         print("STATE BEFORE UNDERSTAND")
         print(state)
+
         result = understand(message, state)
         print(result)
+
+        # -----------------------------
+        # User requested another quotation while one is already active
+        # -----------------------------
+        if (
+            result["intent"] == "quotation"
+            and state.active_task == "quotation"
+            and not state.completed
+        ):
+            state.awaiting_confirmation = "new_quotation"
+
+            reply = (
+                "You already have a quotation in progress.\n\n"
+                "Would you like to:\n"
+                "1. Continue this quotation\n"
+                "2. Start a new quotation"
+            )
+
+            save_conversation(phone, state)
+            send_message(phone, reply)
+            return "OK", 200
+
         state = update_conversation(state, result)
+
         reply = ""
+
         if result["intent"] == "price_lookup":
             matches = search_fabric(result["fabric"])
             print("Matches:", matches)

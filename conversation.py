@@ -53,6 +53,8 @@ class ConversationState:
 
     last_reply: Optional[str] = None
 
+    awaiting_confirmation: Optional[str] = None
+
     def to_json(self):
 
         return json.dumps(asdict(self))
@@ -82,6 +84,9 @@ class ConversationState:
             completed=obj.get("completed", False),
 
             last_reply=obj.get("last_reply"),
+
+            awaiting_confirmation=obj.get("awaiting_confirmation"),
+
         )
 
 def start_new_quotation(state: ConversationState) -> ConversationState:
@@ -179,19 +184,12 @@ def update_conversation(
     intent = result.get("intent")
     state.last_intent = intent
 
-    if (intent == "quotation"):
-        if (
-    result.get("fabric") is None
-    and result.get("fabric_price") is None
-    and result.get("width") is None
-    and result.get("height") is None
-            ):
-            start_new_quotation(state)
-
-    elif not has_active_quotation(state):
+    if intent == "quotation" and not has_active_quotation(state):
         start_new_quotation(state)
 
-    merge_quotation(state, result)
+    if has_active_quotation(state):
+        merge_quotation(state, result)
+
     print("===== AFTER MERGE =====")
     print(state.quotation)
 
@@ -201,10 +199,9 @@ def is_quote_complete(state: ConversationState) -> bool:
     return len(find_missing_fields(state)) == 0
 
 def next_question(state: ConversationState) -> Optional[str]:
-    """
-    Returns the next question to ask the customer,
-    or None if the quotation has all required information.
-    """
+
+    # Returns the next question to ask the customer, or None if the quotation has all required information.
+
 
     missing = find_missing_fields(state)
 
