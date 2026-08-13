@@ -5,18 +5,24 @@ from whatsapp import send_message
 from images import download_image
 from vision import extract_code
 from quotation import load_config
-app = Flask(__name__)
+from quotation_flow import handle_quotation
 from database import (
     init_db,
     get_conversation,
     save_conversation,
 )
-from conversation import update_conversation
-from quotation_flow import handle_quotation
+from conversation import (
+    update_conversation,
+    reset_conversation,
+    start_new_quotation,
+)
 
+app = Flask(__name__)
 
 init_db()
+
 quote_config = load_config("config.json")
+    
 VERIFY_TOKEN = "fabricbot123"
 
 @app.route("/")
@@ -82,14 +88,19 @@ def webhook():
             message = result["code"]
             print(message)
         else:
-            print("Unsupported message type.")
+            send_message(
+                phone,
+                "Sorry, I currently support only text and image messages."
+            )
+            return "OK", 200
 
 
         print("STATE BEFORE UNDERSTAND")
         print(state)
-# -----------------------------
-# Waiting for quotation confirmation
-# -----------------------------
+
+        # -----------------------------
+        # Waiting for quotation confirmation
+        # -----------------------------
         if state.awaiting_confirmation == "new_quotation":
 
             choice = message.lower().strip()
@@ -102,17 +113,12 @@ def webhook():
                 "resume",
                 "yes",
             ]:
-
                 state.awaiting_confirmation = None
 
-                flow = handle_quotation(
-                    state,
-                    quote_config,
-                )
+                flow = handle_quotation(state, quote_config)
 
                 save_conversation(phone, state)
                 send_message(phone, flow.reply)
-
                 return "OK", 200
 
             elif choice in [
@@ -124,32 +130,30 @@ def webhook():
                 "restart",
             ]:
 
-                from conversation import reset_conversation, start_new_quotation
-
                 reset_conversation(state)
                 start_new_quotation(state)
-                flow = handle_quotation(
-        state,
-        quote_config,
-    )
+
                 state.awaiting_confirmation = None
-                save_conversation(phone, flow.reply)
-                send_message(phone, "Which fabric would you like to use?")
 
+                flow = handle_quotation(state, quote_config)
+
+                save_conversation(phone, state)
+                send_message(phone, flow.reply)
                 return "OK", 200
-
             else:
-
                 send_message(
                     phone,
                     "Please reply with:\n"
                     "1. Continue this quotation\n"
                     "2. Start a new quotation"
                 )
-
                 return "OK", 200
-                result = understand(message, state)
-                print(result)
+
+        # -----------------------------
+        # Normal processing starts here
+        # -----------------------------
+        result = understand(message, state)
+        print(result)
 
         # -----------------------------
         # User requested another quotation while one is already active
