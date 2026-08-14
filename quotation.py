@@ -25,6 +25,8 @@ class QuotationInput:
     width_inches: Decimal
     fabric_price_per_meter: Decimal
     order_type: str = "full"
+    user_discount_percent: Decimal = Decimal("0")  # Add this
+
 
 
 @dataclass(frozen=True)
