@@ -91,7 +91,13 @@ class ConversationState:
 
         quotation = None
         if obj.get("quotation"):
-            quotation = QuotationState(**obj["quotation"])
+            quotation_data = obj["quotation"]
+
+            # Backwards compatibility
+            if "discount" in quotation_data:
+                quotation_data.pop("discount")
+
+            quotation = QuotationState(**quotation_data)
 
         return ConversationState(
             active_task=obj.get("active_task"),
