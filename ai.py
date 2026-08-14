@@ -405,6 +405,27 @@ curtain_style = "Please make it pleated"
 
 Always remove surrounding conversational language.
 
+If the customer specifies discounts, extract them separately.
+
+Examples:
+
+"fabric 10%"
+fabric_discount = 10
+
+"tracks 25%"
+track_discount = 25
+
+"stitching 50%"
+stitching_discount = 50
+
+"fabric 15%, stitching 40%"
+fabric_discount = 15
+stitching_discount = 40
+
+If a discount is not mentioned,
+leave it null.
+
+Never guess discounts.
 -----------------------
 OUTPUT REQUIREMENTS
 -----------------------
@@ -439,8 +460,10 @@ class Intent(BaseModel):
     height: Optional[int] = None
     track: Optional[str] = None
     curtain_style: Optional[str] = None
-    discount: Optional[float] = None
     order_type: Optional[str] = None
+    fabric_discount: Optional[float] = None
+    stitching_discount: Optional[float] = None
+    track_discount: Optional[float] = None
 
 
 def understand(message, state=None):

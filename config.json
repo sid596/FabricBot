@@ -7,21 +7,22 @@
     "fabric_rounding_increment_meters": 1,
     "track_length_rounding_feet": 1,
     "default_fullness": 2.4,
+
     "fitting": {
-
     "charge_per_unit": 250,
-
     "clamp_spacing_inches": 30,
-
     "minimum_sections": 1
+    },
 
-},
     "currency_rounding": 1,
-    "default_fabric_discount_percent": 10,
-    "discounts": {
-    "track_percent": 30,
-    "stitching_percent": 50
-},
+
+    "default_discount": {
+    "fabric_discount":10,
+    "track_discount":30,
+    "stitching_discount":50
+    } 
+  },
+
   "default_track": "MTrack Premium",
 	"default_style": "Pleated",
 	"gst": {
@@ -29,7 +30,6 @@
     "stitching": 5,
     "track": 18,
     "fitting": 18
-}
   },
   "track_rates_per_running_foot": {
     "Standard Track": 150,

@@ -59,10 +59,14 @@ class QuotationState:
 
     track: Optional[str] = None
     curtain_style: Optional[str] = None
+    fabric_discount: Optional[float] = None
+    track_discount: Optional[float] = None
+    stitching_discount: Optional[float] = None
 
     order_type: Optional[str] = None
-    discount: Optional[float] = None
-
+    fabric_discount: float = 0
+    stitching_discount: float = 0
+    track_discount: float = 0
     confirmed: bool = False
 
 
@@ -134,13 +138,16 @@ def merge_quotation(
         q.fabric_price = result["fabric_price"]
 
     for field in (
-        "width",
-        "height",
-        "track",
-        "curtain_style",
-        "discount",
-        "order_type",
-    ):
+    "width",
+    "height",
+    "track",
+    "curtain_style",
+    "order_type",
+    "fabric_discount",
+    "stitching_discount",
+    "track_discount",
+):
+        
         value = result.get(field)
         if value is not None:
             setattr(q, field, value)

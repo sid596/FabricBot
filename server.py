@@ -211,7 +211,7 @@ def webhook():
 
             app.logger.info(vision_result)
 
-            message = vision_result["code"]
+            message = f"What is the price of {vision_result["code"]}?"
             print("VISION MESSAGE:", message)
 
         else:
