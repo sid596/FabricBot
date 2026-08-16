@@ -10,7 +10,8 @@ from decimal import Decimal
 app = Flask(__name__)
 from database import init_db, get_or_create_conversation
 
-
+init_db()
+quote_config = load_config("config.json")
 VERIFY_TOKEN = "fabricbot123"
 
 @app.route("/")
@@ -55,8 +56,8 @@ def webhook():
         if message_type == "text":
 
             message = message_data["text"]["body"]
-            init_db()
-            quote_config = load_config("config.json")
+            result = understand(message)
+
 
          # IMAGE MESSAGE
         elif message_type == "image":
@@ -73,9 +74,12 @@ def webhook():
 
             message = result["code"]
             print(message)
+            code_look = "What is the price of " + message + "?"
+            result = understand(code_look)
+
         else:
             print("Unsupported message type.")
-        result = understand("What is the price of ", message, "?")
+        
         print(result)
         reply = ""
         if result["intent"] == "price_lookup":
