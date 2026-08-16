@@ -469,7 +469,7 @@ class Intent(BaseModel):
 def understand(message, state=None):
     message = message.strip()
     waiting_for = None
-    context = ""
+
 
     if state is not None:
         waiting_for = expected_field(state)
