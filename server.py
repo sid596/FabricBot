@@ -76,26 +76,6 @@ def webhook():
             print(message)
             code_look = "What is the price of " + message + "?"
             result = understand(code_look)
-            print("===== IMAGE RECEIVED =====")
-            print(image_id)
-
-            print("===== OCR RESULT =====")
-            print(result)
-
-            print("===== MESSAGE SENT TO AI =====")
-            print(message)
-
-            print("===== UNDERSTAND RESULT =====")
-            print(result)
-
-            print("===== SEARCH QUERY =====")
-            print(result["fabric"])
-
-            print("===== SEARCH RESULTS =====")
-            print(matches)
-
-            print("===== FINAL REPLY =====")
-            print(reply)
 
         else:
             print("Unsupported message type.")
@@ -114,6 +94,26 @@ def webhook():
                         f"Price: ₹{fabric['price']}/m\n"
                         f"Width: {fabric['width']} inches\n\n"
                     )
+                print("===== IMAGE RECEIVED =====")
+                print(image_id)
+
+                print("===== OCR RESULT =====")
+                print(result)
+
+                print("===== MESSAGE SENT TO AI =====")
+                print(message)
+
+                print("===== UNDERSTAND RESULT =====")
+                print(result)
+
+                print("===== SEARCH QUERY =====")
+                print(result["fabric"])
+
+                print("===== SEARCH RESULTS =====")
+                print(matches)
+
+                print("===== FINAL REPLY =====")
+                print(reply)
             else:
                 reply = "Sorry, I couldn't find that fabric."
         elif result["intent"] == "quotation":
