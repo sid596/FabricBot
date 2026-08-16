@@ -71,6 +71,12 @@ def webhook():
             print(message)
         else:
             print("Unsupported message type.")
+            send_message(
+                phone,
+                "Sorry, I currently only support text messages and photos of "
+                "product codes.",
+            )
+            return "OK", 200
         result = understand(message)
         print(result)
         reply = ""

@@ -1,7 +1,10 @@
 import os
 import requests
+from dotenv import load_dotenv
 
-ACCESS_TOKEN = "EAAPDL3JnivUBRZBMiy0ArGKmUhGPhiDEAGSkkrRPHEedItZAPJwmPbBOyq8BCTLZArF06puUHDY5M67AM5RZCkHphsv80MXyiAGGyPkcrFZAbMdnKdLqzhHzJT0pVgPdPjTw2CZCjWF19ZB73mzFVOIZCs4L3WUOMO6JkiTp5ZCiOy7rEurVY40nrqNtEDsKqowZDZD"
+load_dotenv()
+
+ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 
 def download_image(image_id):
     """

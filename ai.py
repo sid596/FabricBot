@@ -26,9 +26,7 @@ class Intent(BaseModel):
     discount: Optional[float] = None
     order_type: Optional[str] = None
 
-def understand(message):
-
-    knowledge = f"""
+KNOWLEDGE = """
 You are Angie, an AI assistant for a curtain and furnishing business.
 
 Your only job is to understand the user's request and extract structured information.
@@ -410,14 +408,33 @@ OUTPUT
 Return ONLY valid JSON.
 
 """
-    # Cache
-    cache = client.caches.create(
-        model = "gemini-2.5-flash",
-        config = genai.types.CreateCachedContentConfig(
-            display_name="furnishing0calculation-rules-v1", 
-            system_instruction = knowledge,
-            ttl = "86400s"
-        ))
+
+_cache = None
+
+
+def _get_cache():
+    """
+    Create the Gemini prompt cache once and reuse it for every request,
+    instead of creating a brand new cache on every single message.
+    Note: the cache still has a 24h TTL and isn't auto-refreshed, so a
+    long-running server process will need a restart (or a proper refresh
+    mechanism) at least once a day.
+    """
+    global _cache
+    if _cache is None:
+        _cache = client.caches.create(
+            model="gemini-2.5-flash",
+            config=genai.types.CreateCachedContentConfig(
+                display_name="furnishing0calculation-rules-v1",
+                system_instruction=KNOWLEDGE,
+                ttl="86400s",
+            ),
+        )
+    return _cache
+
+
+def understand(message):
+    cache = _get_cache()
     # response
     response = client.models.generate_content(
     model="gemini-2.5-flash",
