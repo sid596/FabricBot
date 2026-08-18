@@ -11,8 +11,10 @@ client = genai.Client(
 
 from typing import Optional, types
 
-class Intent(BaseModel):
-    intent: str
+class LineItem(BaseModel):
+    room: Optional[str] = None
+    window: Optional[str] = None
+    curtain_type: Optional[str] = None
 
     fabric: Optional[str] = None
     fabric_price: Optional[float] = None
@@ -23,8 +25,18 @@ class Intent(BaseModel):
     track: Optional[str] = None
     curtain_style: Optional[str] = None
 
-    discount: Optional[float] = None
     order_type: Optional[str] = None
+
+
+class Intent(BaseModel):
+    intent: str
+
+    # Used only when intent = price_lookup
+    fabric: Optional[str] = None
+
+    # Used only when intent = quotation. One entry per
+    # room + window + curtain_type combination.
+    line_items: Optional[list[LineItem]] = None
 
 KNOWLEDGE = """
 You are Angie, an AI assistant for a curtain and furnishing business.
@@ -47,7 +59,8 @@ Examples:
 - How much is Luna?
 
 quotation
-The user wants a curtain quotation.
+The user wants a curtain quotation. This may cover a single window, or
+multiple rooms/windows described in one message.
 
 Examples:
 - Quote Luna 71 x 65
@@ -55,23 +68,97 @@ Examples:
 - Need curtains for one window
 - Fabric price is 590, size 71x65
 - Quotation for 7 feet height and 8 feet width
+- Living room 57x82, MBR 53x55, both NuHome Luna, MTrack Premium
+- MBR has a balcony window and a normal window, balcony needs main and
+  sheer, normal window only needs main, both 84x60, NuHome Luna
 
 -----------------------
 FIELDS
 -----------------------
 
-Extract these fields if present:
+For price_lookup, extract:
 
 - intent
+- fabric
+
+For quotation, extract:
+
+- intent
+- line_items: a list of one or more line items
+
+Each line item may contain:
+
+- room
+- window
+- curtain_type
 - fabric
 - fabric_price
 - height
 - width
 - track
 - curtain_style
-- discount
+- order_type
 
-Return null for any field that is not mentioned.
+Return null for any field that is not mentioned. See the LINE ITEMS
+section below for how to split a message into multiple line items.
+
+-----------------------
+LINE ITEMS
+-----------------------
+
+A quotation is a list of line items. Each line item represents ONE
+curtain_type in ONE window in ONE room.
+
+Create a separate line item for each distinct combination of:
+
+- room
+- window (if more than one window is mentioned for the same room)
+- curtain_type (if more than one curtain_type is requested for the
+  same window, e.g. "main and sheer")
+
+If the customer gives one shared value (fabric, dimensions, track,
+curtain_style) for multiple rooms/windows/curtain_types, copy that
+same value onto every line item it applies to. Do not leave it null
+on some line items just because it was only written once.
+
+If the customer does not mention rooms or windows at all (a single,
+generic quotation request), return exactly ONE line item with
+room = null and window = null.
+
+Examples:
+
+Customer:
+"Living room 57x82, MBR 53x55, both NuHome Luna, MTrack Premium"
+
+Output: 2 line items
+1. room="Living", window=null, curtain_type=null, fabric="NuHome Luna",
+   height=57, width=82, track="MTrack Premium"
+2. room="MBR", window=null, curtain_type=null, fabric="NuHome Luna",
+   height=53, width=55, track="MTrack Premium"
+
+Customer:
+"MBR has a balcony window and a normal window. Balcony needs main
+and sheer, normal window only needs main. Both windows are 84x60.
+Use NuHome Luna."
+
+Output: 3 line items
+1. room="MBR", window="Balcony", curtain_type="Sheer", fabric="NuHome Luna",
+   height=84, width=60
+2. room="MBR", window="Balcony", curtain_type="Main", fabric="NuHome Luna",
+   height=84, width=60
+3. room="MBR", window="Normal", curtain_type="Main", fabric="NuHome Luna",
+   height=84, width=60
+
+Customer:
+"Quote Luna 71x65"
+
+Output: 1 line item
+1. room=null, window=null, curtain_type=null, fabric="Luna",
+   height=71, width=65
+
+Do not invent a room, window, or curtain_type split that the customer
+did not describe. When in doubt about whether something is a separate
+line item, prefer fewer, larger line items over inventing a split.
 
 -----------------------
 FABRICS
@@ -195,34 +282,38 @@ If no unit is specified, assume inches.
 RULES
 -----------------------
 
-If only a fabric name is given:
+If only a fabric name is given, with no dimensions and no other
+quotation signal:
 
 intent = price_lookup
 
-If a fabric price is given:
+fabric = the fabric name
 
-intent = quotation
+If a fabric price is given for a quotation:
 
-fabric_price = value
-
-fabric = null
+Set fabric_price = value and fabric = null on that line item.
 
 If window dimensions are given:
 
 intent = quotation
 
-Do not invent:
+Split into line items as described in LINE ITEMS above.
+
+Do not invent, on any line item:
 
 - dimensions
-- discounts
 - track
 - curtain_style
 - fabric
 - fabric_price
-Determine order_type.
+- room
+- window
+- curtain_type
 
-If the customer asks for curtains or a quotation without specifying otherwise,
-assume:
+Determine order_type per line item.
+
+If the customer asks for curtains or a quotation without specifying
+otherwise, assume:
 
 order_type = "full"
 
@@ -235,7 +326,7 @@ If they explicitly ask only for tracks or rods:
 order_type = "track_only"
 
 Otherwise return null.
-If information is missing, return null.
+If information is missing, return null for that field on that line item.
 -----------------------
 BUSINESS KNOWLEDGE
 -----------------------
@@ -266,17 +357,16 @@ Customer:
 "I want curtains."
 
 Output:
-height = null
-width = null
-fabric = null
+intent = quotation
+line_items = [ { room=null, window=null, curtain_type=null, height=null,
+width=null, fabric=null } ]
 
 Customer:
 "Need quotation."
 
 Output:
 intent = quotation
-
-All remaining fields = null.
+line_items = [ { all fields null } ]
 
 -----------------------
 GENERAL LANGUAGE UNDERSTANDING
@@ -472,6 +562,10 @@ if __name__ == "__main__":
     "Quotation Luna 71x65 only track",
     "Need only MTrack Premium for 8 feet",
     "I already have tracks, quotation for Luna",
+    "Living room 57x82, MBR 53x55, both NuHome Luna, MTrack Premium",
+    "MBR has a balcony window and a normal window. Balcony needs main "
+    "and sheer, normal window only needs main. Both windows are 84x60. "
+    "Use NuHome Luna.",
 ]
 
     for t in tests:

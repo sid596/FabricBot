@@ -275,6 +275,56 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
 )
 
 
+@dataclass(frozen=True)
+class LineQuoteLabel:
+    """Human-readable label for one line item, carried alongside its
+    QuotationResult so the reply can say which room/window it belongs to."""
+    room: str | None
+    window: str | None
+    curtain_type: str | None
+
+
+@dataclass(frozen=True)
+class MultiQuotationResult:
+    line_labels: list[LineQuoteLabel]
+    line_results: list[QuotationResult]
+    total_fabric_cost: int
+    total_track_cost: int
+    total_stitching_cost: int
+    total_fitting_charges: int
+    total_gst: int
+    grand_total: int
+
+
+def calculate_multi_line_quotation(
+    items: list[tuple[LineQuoteLabel, QuotationInput]],
+    config: dict[str, Any],
+) -> MultiQuotationResult:
+    """
+    Computes a quotation covering multiple rooms/windows/curtain types
+    in one go. Each line item is calculated with the exact same,
+    already-tested calculate_curtain_quote() logic used for a single
+    static quote -- this function only adds the multi-line loop and
+    aggregation on top, it does not change any per-line math.
+    """
+    if not items:
+        raise ValueError("At least one line item is required.")
+
+    labels = [label for label, _ in items]
+    results = [calculate_curtain_quote(data, config) for _, data in items]
+
+    return MultiQuotationResult(
+        line_labels=labels,
+        line_results=results,
+        total_fabric_cost=sum(r.total_fabric_cost for r in results),
+        total_track_cost=sum(r.total_track_cost for r in results),
+        total_stitching_cost=sum(r.total_stitching_cost for r in results),
+        total_fitting_charges=sum(r.fitting_charges for r in results),
+        total_gst=sum(r.gst_total for r in results),
+        grand_total=sum(r.grand_total for r in results),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     default_config = Path(__file__).with_name("config.json")
     parser = argparse.ArgumentParser(description="Create a curtain quotation.")
