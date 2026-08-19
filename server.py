@@ -13,7 +13,7 @@ from quotation import (
 from search import search_fabric
 from whatsapp import send_message
 from images import download_image
-from vision import extract_code
+from vision import extract_code, extract_visual_content
 from quotation import load_config
 from decimal import Decimal
 
@@ -238,6 +238,63 @@ def build_reply(result, quote_config):
         return "Sorry, I didn't understand your request."
 
 
+def _format_item_for_review(item):
+    """One readable line per extracted row, deliberately using the same
+    phrasing style (room / window: type, HxW, fabric, track) that
+    ai.py's LINE ITEMS prompt already parses reliably, so this reply
+    can be sent straight back in as the quotation request."""
+    location = " / ".join(p for p in [item.get("room"), item.get("window")] if p)
+    if not location:
+        location = "Item"
+
+    bits = []
+    if item.get("curtain_type"):
+        bits.append(item["curtain_type"])
+
+    if item.get("height") is not None and item.get("width") is not None:
+        bits.append(f"{item['height']}x{item['width']}")
+    elif item.get("height") is not None or item.get("width") is not None:
+        h = item.get("height")
+        w = item.get("width")
+        bits.append(
+            f"{h if h is not None else '?'}x{w if w is not None else '?'} "
+            f"(one dimension unclear)"
+        )
+    else:
+        bits.append("dimensions not legible")
+
+    if item.get("order_type") == "track_only":
+        bits.append("track only")
+    elif item.get("fabric"):
+        bits.append(item["fabric"])
+    elif item.get("fabric_price") is not None:
+        bits.append(f"fabric price {item['fabric_price']}")
+    else:
+        bits.append("fabric not legible")
+
+    if item.get("track"):
+        bits.append(item["track"])
+
+    return f"{location}: {', '.join(bits)}"
+
+
+def build_table_review_reply(line_items):
+    if not line_items:
+        return (
+            "I couldn't clearly read any rows from that note. Could you "
+            "resend a clearer photo, or type the details instead?"
+        )
+
+    body = "\n".join(_format_item_for_review(item) for item in line_items)
+    return (
+        "Here's what I read from your note:\n\n"
+        f"{body}\n\n"
+        "If that's correct, send this exact message back to me and I'll "
+        "prepare the quotation. If anything's wrong or missing, fix it "
+        "before sending it back."
+    )
+
+
 def process_message(data):
     try:
         value = data["entry"][0]["changes"][0]["value"]
@@ -263,11 +320,26 @@ def process_message(data):
             print(f"Image ID: {image_id}")
 
             image_path = download_image(image_id)
-            result = extract_code(image_path)
-            app.logger.info(result)
+            visual = extract_visual_content(image_path)
+            app.logger.info(visual)
+            print(visual)
 
-            message = result["code"]
-            print(message)
+            if visual["content_type"] == "product_code":
+                message = visual["code"]
+
+            elif visual["content_type"] == "quotation_table":
+                reply = build_table_review_reply(visual.get("line_items") or [])
+                send_message(phone, reply)
+                return
+
+            else:
+                send_message(
+                    phone,
+                    "Sorry, I couldn't tell what that photo was. Please send "
+                    "a clear photo of a product tag, or of your requirements "
+                    "note.",
+                )
+                return
 
         # -----------------------------
         # UNSUPPORTED MESSAGE TYPE
