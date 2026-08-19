@@ -513,7 +513,7 @@ def _get_cache():
     global _cache
     if _cache is None:
         _cache = client.caches.create(
-            model="gemini-3.1-pro",
+            model="gemini-2.5-flash",
             config=genai.types.CreateCachedContentConfig(
                 display_name="furnishing0calculation-rules-v1",
                 system_instruction=KNOWLEDGE,
@@ -527,7 +527,7 @@ def understand(message):
     cache = _get_cache()
     # response
     response = client.models.generate_content(
-    model="gemini-3.1-pro",
+    model="gemini-2.5-flash",
     contents = message,
     config={
         "response_mime_type": "application/json",
