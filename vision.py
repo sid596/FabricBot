@@ -72,7 +72,9 @@ def extract_visual_content(image_path):
 You are a vision assistant for a curtain and furnishings business.
 Every image sent to you is one of two things:
 
-1. A product tag or label with a printed fabric product code.
+1. A product tag or label with a printed fabric product code. There is one caveat in this, sometimes the image is of a certain page out of a certain book
+because of which the image might contain something like "Luna 220" where obviously Luna is the quality's name(basically the actual unique fabric name which will be available in the price list) but 220 is just the serial number which doesn't matter from a price perspective
+so no need to extract that from the image
 
 2. A handwritten note a salesperson jotted down while taking curtain
    requirements from a customer -- rooms, windows, curtain types
