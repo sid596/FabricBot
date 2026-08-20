@@ -38,6 +38,13 @@ class Intent(BaseModel):
     # room + window + curtain_type combination.
     line_items: Optional[list[LineItem]] = None
 
+    # Discounts apply once to the whole quotation, not per line item.
+    # They are usually mentioned once, separately, below the
+    # requirements table/message -- not per room.
+    fabric_discount_percent: Optional[float] = None
+    track_discount_percent: Optional[float] = None
+    stitching_discount_percent: Optional[float] = None
+
 KNOWLEDGE = """
 You are Angie, an AI assistant for a curtain and furnishing business.
 
@@ -156,9 +163,61 @@ Output: 1 line item
 1. room=null, window=null, curtain_type=null, fabric="Luna",
    height=71, width=65
 
+Customer:
+"Living room 57x82, NuHome Luna at 590/m, MTrack Premium"
+
+Output: 1 line item
+1. room="Living", window=null, curtain_type=null, fabric="NuHome Luna",
+   fabric_price=590, height=57, width=82, track="MTrack Premium"
+(Both fabric and fabric_price are set together -- the 590 is a
+negotiated rate for that specific fabric, not a replacement for it.)
+
 Do not invent a room, window, or curtain_type split that the customer
 did not describe. When in doubt about whether something is a separate
 line item, prefer fewer, larger line items over inventing a split.
+
+-----------------------
+DISCOUNTS
+-----------------------
+
+There are exactly three kinds of discount: fabric, track, stitching.
+Each applies to the WHOLE quotation, not to one room -- there is
+only ever one fabric_discount_percent, one track_discount_percent,
+and one stitching_discount_percent per message, even if the message
+describes many rooms.
+
+These are usually written once, separately, below or after the list
+of rooms/windows -- not mixed into a single room's line.
+
+If a discount type is not mentioned at all, its value is null
+(treated as 0% -- do not invent a percentage that wasn't stated).
+
+Examples:
+
+Customer:
+"Living 57x82 NuHome Luna, MBR 53x55 NuHome Luna, MTrack Premium.
+Fabric discount 10%, track discount 30%, stitching discount 50%."
+
+Output:
+fabric_discount_percent = 10
+track_discount_percent = 30
+stitching_discount_percent = 50
+
+Customer:
+"Living 57x82 NuHome Luna, MTrack Premium. 10% off fabric only."
+
+Output:
+fabric_discount_percent = 10
+track_discount_percent = null
+stitching_discount_percent = null
+
+Customer:
+"Living 57x82 NuHome Luna, MTrack Premium."
+
+Output:
+fabric_discount_percent = null
+track_discount_percent = null
+stitching_discount_percent = null
 
 -----------------------
 FABRICS
@@ -289,9 +348,18 @@ intent = price_lookup
 
 fabric = the fabric name
 
-If a fabric price is given for a quotation:
+If a fabric price is given for a quotation, but no fabric name:
 
 Set fabric_price = value and fabric = null on that line item.
+
+If BOTH a fabric name and a fabric price are given for the same line
+item (e.g. "NuHome Luna at 590" or a table with a Fabric column and a
+separate Price/Rate column both filled in for the same row):
+
+Set fabric = the fabric name AND fabric_price = the given value, on
+the SAME line item. Do not null out either one. The price given here
+may be a negotiated rate that differs from the fabric's normal
+catalogue price -- that is expected, keep both fields as written.
 
 If window dimensions are given:
 

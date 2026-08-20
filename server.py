@@ -142,6 +142,11 @@ def build_reply(result, quote_config):
             return "\n".join(missing)
 
         resolved = []  # list of (LineQuoteLabel, QuotationInput)
+        assumed_defaults = []  # notices for silently-assumed values
+
+        fabric_discount_percent = result.get("fabric_discount_percent") or 0
+        track_discount_percent = result.get("track_discount_percent") or 0
+        stitching_discount_percent = result.get("stitching_discount_percent") or 0
 
         for item in line_items:
             label_text = _line_label(item)
@@ -149,7 +154,26 @@ def build_reply(result, quote_config):
             fabric = None
 
             if order_type != "track_only":
-                if item.get("fabric") is not None:
+                has_fabric = item.get("fabric") is not None
+                has_price = item.get("fabric_price") is not None
+
+                if has_fabric and has_price:
+                    # Negotiated rate: look the fabric up for its real
+                    # width (needed for meter calculations), but use
+                    # the given price instead of the catalogue price,
+                    # since it may differ from what's on file.
+                    matches = search_fabric(item["fabric"])
+                    if not matches:
+                        missing.append(
+                            f"Sorry, I couldn't find fabric "
+                            f"'{item['fabric']}' for {label_text}."
+                        )
+                        continue
+                    fabric = {
+                        "price": item["fabric_price"],
+                        "width": matches[0]["width"],
+                    }
+                elif has_fabric:
                     matches = search_fabric(item["fabric"])
                     if not matches:
                         missing.append(
@@ -158,18 +182,31 @@ def build_reply(result, quote_config):
                         )
                         continue
                     fabric = matches[0]
-                elif item.get("fabric_price") is not None:
+                elif has_price:
+                    # No fabric name to look up -- width has to be
+                    # assumed. This is the one case where we can't
+                    # know the real width.
                     DEFAULT_FABRIC_WIDTH = "48"
                     fabric = {
                         "price": item["fabric_price"],
                         "width": DEFAULT_FABRIC_WIDTH,
                     }
                 else:
-                    missing.append(
-                        f"Please provide the fabric name or "
-                        f"fabric price for {label_text}."
+                    # Nothing given at all -- assume a default price
+                    # and width rather than blocking the quote. This
+                    # is the one place we invent a number instead of
+                    # asking; make sure the reply is explicit about it
+                    # so nobody mistakes it for a real quoted fabric.
+                    DEFAULT_FABRIC_PRICE = "590"
+                    DEFAULT_FABRIC_WIDTH = "48"
+                    fabric = {
+                        "price": DEFAULT_FABRIC_PRICE,
+                        "width": DEFAULT_FABRIC_WIDTH,
+                    }
+                    assumed_defaults.append(
+                        f"Assumed default fabric price (₹{DEFAULT_FABRIC_PRICE}/m) "
+                        f"for {label_text} -- no fabric or price was given."
                     )
-                    continue
 
             label = LineQuoteLabel(
                 room=item.get("room"),
@@ -192,6 +229,9 @@ def build_reply(result, quote_config):
                     "0" if order_type == "track_only" else str(fabric["price"])
                 ),
                 order_type=order_type,
+                fabric_discount_percent=Decimal(str(fabric_discount_percent)),
+                track_discount_percent=Decimal(str(track_discount_percent)),
+                stitching_discount_percent=Decimal(str(stitching_discount_percent)),
             )
             resolved.append((label, quotation_input))
 
@@ -199,6 +239,9 @@ def build_reply(result, quote_config):
             return "\n".join(missing)
 
         multi = calculate_multi_line_quotation(resolved, quote_config)
+        defaults_note = (
+            ("\n\n" + "\n".join(assumed_defaults)) if assumed_defaults else ""
+        )
 
         if len(multi.line_results) == 1:
             r = multi.line_results[0]
@@ -210,6 +253,7 @@ def build_reply(result, quote_config):
                 f"Fitting: ₹{r.fitting_charges}\n"
                 f"GST: ₹{r.gst_total}\n\n"
                 f"Grand Total: ₹{r.grand_total}"
+                f"{defaults_note}"
             )
 
         parts = []
@@ -232,7 +276,7 @@ def build_reply(result, quote_config):
             f"Total GST: ₹{multi.total_gst}\n\n"
             f"Grand Total: ₹{multi.grand_total}"
         )
-        return "Quotation\n\n" + "\n\n".join(parts)
+        return "Quotation\n\n" + "\n\n".join(parts) + defaults_note
 
     else:
         return "Sorry, I didn't understand your request."

@@ -25,6 +25,9 @@ class QuotationInput:
     width_inches: Decimal
     fabric_price_per_meter: Decimal
     order_type: str = "full"
+    fabric_discount_percent: Decimal = Decimal(0)
+    track_discount_percent: Decimal = Decimal(0)
+    stitching_discount_percent: Decimal = Decimal(0)
 
 
 @dataclass(frozen=True)
@@ -132,7 +135,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
             money_increment,
         )
 
-        discount = Decimal(calc["default_fabric_discount_percent"])
+        discount = data.fabric_discount_percent
 
         fabric_cost = _money(
             Decimal(fabric_cost)
@@ -151,7 +154,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         if stitching_discount:
             stitching_cost = _money(
                 Decimal(stitching_cost)
-                * (Decimal(100) - Decimal(calc["discounts"]["stitching_percent"]))
+                * (Decimal(100) - data.stitching_discount_percent)
                 / Decimal(100),
                 money_increment,
             )
@@ -187,7 +190,7 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
         if apply_track_discount:
             track_cost = _money(
                 Decimal(track_cost)
-                * (Decimal(100) - Decimal(calc["discounts"]["track_percent"]))
+                * (Decimal(100) - data.track_discount_percent)
                 / Decimal(100),
                 money_increment,
             )
