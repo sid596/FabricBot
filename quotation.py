@@ -32,11 +32,15 @@ class QuotationInput:
 
 @dataclass(frozen=True)
 class QuotationResult:
-    fabric_width_inches: float    
+    fabric_width_inches: float
     track_type: str
     curtain_style: str
+    window_height_inches: float
+    window_width_inches: float
     fold_margin_inches: float
+    fullness: float
     number_of_panels: int
+    raw_meters_per_panel: float
     meters_per_panel: float
     total_fabric_meters: float
     fabric_price_per_meter: float
@@ -160,9 +164,10 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
             )
 
     else:
-
         fabric_width = Decimal(0)
+        fullness = Decimal(0)
         panels = 0
+        raw_meters_per_panel = Decimal(0)
         meters_per_panel = Decimal(0)
         total_fabric_meters = Decimal(0)
         stitching_rate = Decimal(0)
@@ -268,6 +273,10 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     total_track_cost=track_cost,
     fitting_sections=fitting_units,
     fitting_charges=fitting_charges,
+    window_height_inches=float(data.height_inches),
+    window_width_inches=float(data.width_inches),
+    fullness=float(fullness),
+    raw_meters_per_panel=float(raw_meters_per_panel),
     gst_total=gst_total,
     grand_total=
         fabric_cost

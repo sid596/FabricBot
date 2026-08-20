@@ -17,6 +17,9 @@
 
 },
     "currency_rounding": 1,
+    "default_main_fabric_price_per_meter": 590,
+    "default_sheer_fabric_price_per_meter": 490,
+    "default_fabric_width_inches": 48,
     "default_fabric_discount_percent": 10,
     "discounts": {
     "track_percent": 30,

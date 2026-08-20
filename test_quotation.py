@@ -86,4 +86,15 @@ for test in tests:
     print("=" * 70)
     print(test["name"])
     quote = calculate_curtain_quote(test["input"], config)
+    assert quote.window_height_inches == float(test["input"].height_inches)
+    assert quote.window_width_inches == float(test["input"].width_inches)
+    assert quote.raw_meters_per_panel == quote.meters_per_panel
+
+    expected_fullness = (
+        float(config["calculation"]["default_fullness"])
+        if test["input"].order_type != "track_only"
+        else 0.0
+    )
+
+    assert quote.fullness == expected_fullness
     print(quote)

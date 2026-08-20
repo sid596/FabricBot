@@ -35,6 +35,184 @@ def _format_label(label: LineQuoteLabel):
     parts = [p for p in parts if p]
     return " / ".join(parts) if parts else "Quotation"
 
+def _default_fabric(item, calculation):
+    """Return configured fallback fabric values for a quotation line item."""
+    curtain_type = (item.get("curtain_type") or "").casefold()
+
+    price_key = (
+        "default_sheer_fabric_price_per_meter"
+        if "sheer" in curtain_type
+        else "default_main_fabric_price_per_meter"
+    )
+
+    return {
+        "price": calculation[price_key],
+        "width": calculation["default_fabric_width_inches"],
+    }
+
+def _resolve_fabric(item, calculation, label_text):
+    """Resolve catalogue data or return safe configured defaults."""
+    has_fabric = item.get("fabric") is not None
+    has_price = item.get("fabric_price") is not None
+
+    if has_fabric and has_price:
+        matches = search_fabric(item["fabric"])
+        width = (
+            matches[0]["width"]
+            if matches
+            else calculation["default_fabric_width_inches"]
+        )
+        note = None if matches else (
+            f"Used the default fabric width for {label_text} because "
+            f"'{item['fabric']}' was not found."
+        )
+        return {"price": item["fabric_price"], "width": width}, note
+
+    if has_fabric:
+        matches = search_fabric(item["fabric"])
+        if matches:
+            return matches[0], None
+
+        fabric = _default_fabric(item, calculation)
+        return fabric, (
+            f"Used the default fabric price for {label_text} because "
+            f"'{item['fabric']}' was not found."
+        )
+
+    if has_price:
+        return {
+            "price": item["fabric_price"],
+            "width": calculation["default_fabric_width_inches"],
+        }, None
+
+    fabric = _default_fabric(item, calculation)
+    return fabric, (
+        f"Used the default fabric price (₹{fabric['price']}/m) for "
+        f"{label_text} — no fabric or price was given."
+    )
+
+
+def _resolve_line_item(item, calculation, discounts):
+    """Convert one extracted line item into calculator input."""
+    label = LineQuoteLabel(
+        room=item.get("room"),
+        window=item.get("window"),
+        curtain_type=item.get("curtain_type"),
+    )
+
+    label_text = _line_label(item)
+    order_type = item.get("order_type") or "full"
+    note = None
+
+    if order_type == "track_only":
+        fabric = {"price": 0, "width": 0}
+    else:
+        fabric, note = _resolve_fabric(item, calculation, label_text)
+
+    quotation_input = QuotationInput(
+        fabric_width_inches=Decimal(str(fabric["width"])),
+        track_type=item.get("track") or calculation["default_track"],
+        curtain_style=(
+            ""
+            if order_type == "track_only"
+            else item.get("curtain_style") or calculation["default_style"]
+        ),
+        height_inches=Decimal(str(item["height"])),
+        width_inches=Decimal(str(item["width"])),
+        fabric_price_per_meter=Decimal(str(fabric["price"])),
+        order_type=order_type,
+        fabric_discount_percent=Decimal(str(discounts["fabric"])),
+        track_discount_percent=Decimal(str(discounts["track"])),
+        stitching_discount_percent=Decimal(str(discounts["stitching"])),
+    )
+
+    return label, quotation_input, note
+
+
+def _format_quote_section(label, quote, show_line_total):
+    """Format one physical track as a polished WhatsApp quotation section."""
+    title = _format_label(label)
+
+    sections = [
+        (
+            f"🪟 *{title}*\n"
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+            "📐 *Window Details*\n"
+            f"• Height: {quote.window_height_inches:.0f}\"\n"
+            f"• Width: {quote.window_width_inches:.0f}\""
+        )
+    ]
+
+    if quote.number_of_panels:
+        sections.append(
+            "🧵 *Fabric Details*\n"
+            f"• Fabric Price: ₹{quote.fabric_price_per_meter:.0f}/m\n"
+            f"• Fabric Width: {quote.fabric_width_inches:.0f}\"\n"
+            f"• Curtain Style: {quote.curtain_style}\n"
+            f"• Fullness: {quote.fullness:.1f}×"
+        )
+
+        sections.append(
+            "📏 *Fabric Calculation*\n"
+            f"• Panels Required: {quote.number_of_panels}\n"
+            f"• Cut Length / Panel: {quote.raw_meters_per_panel:.2f} m\n"
+            f"• Total Fabric Used: {quote.total_fabric_meters:.2f} m"
+        )
+
+    if quote.track_length_feet:
+        sections.append(
+            "🛤 *Track Details*\n"
+            f"• Track: {quote.track_type}\n"
+            f"• Track Length: {quote.track_length_feet:.1f} ft"
+        )
+
+    sections.append(
+        "💰 *Cost Breakdown*\n"
+        f"• Fabric: ₹{quote.total_fabric_cost}\n"
+        f"• Track: ₹{quote.total_track_cost}\n"
+        f"• Stitching: ₹{quote.total_stitching_cost}\n"
+        f"• Fitting: ₹{quote.fitting_charges}\n"
+        f"• GST: ₹{quote.gst_total}"
+    )
+
+    if show_line_total:
+        sections.append(f"💵 *Line Total: ₹{quote.grand_total}*")
+
+    return "\n\n".join(sections)
+
+
+def _format_grand_total(multi):
+    """Format all combined costs after every line item is shown."""
+    return (
+        "🏁 *Quotation Total*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"• Total Fabric: ₹{multi.total_fabric_cost}\n"
+        f"• Total Track: ₹{multi.total_track_cost}\n"
+        f"• Total Stitching: ₹{multi.total_stitching_cost}\n"
+        f"• Total Fitting: ₹{multi.total_fitting_charges}\n"
+        f"• Total GST: ₹{multi.total_gst}\n\n"
+        f"💵 *Grand Total: ₹{multi.grand_total}*"
+    )
+
+
+def _format_quotation_reply(multi, default_notes):
+    """Format single-line and multiline quotations consistently."""
+    show_line_total = len(multi.line_results) > 1
+
+    sections = [
+        _format_quote_section(label, quote, show_line_total)
+        for label, quote in zip(multi.line_labels, multi.line_results)
+    ]
+
+    sections.append(_format_grand_total(multi))
+
+    reply = "🪟 *Curtain Quotation*\n\n" + "\n\n".join(sections)
+
+    if default_notes:
+        reply += "\n\nℹ️ " + "\n".join(default_notes)
+
+    return reply
+
 # -----------------------------------------------------------------
 # Dedupe: WhatsApp resends the same message if it doesn't get a fast
 # 200 back. We ack immediately now (see below), so this is a safety
@@ -102,185 +280,66 @@ def webhook():
     threading.Thread(target=process_message, args=(data,), daemon=True).start()
     return "OK", 200
 
-
 def build_reply(result, quote_config):
-    """Given ai.py's parsed result, build the WhatsApp reply text.
-    Pulled out of process_message() so it can be unit tested without
-    needing a live webhook or a live Gemini call."""
+    """Build a WhatsApp reply from structured AI output."""
 
     if result["intent"] == "price_lookup":
         matches = search_fabric(result["fabric"])
-        print("Matches:", matches)
+
         if not matches:
             return "Sorry, I couldn't find that fabric."
-        reply = ""
-        for fabric in matches:
-            reply += (
+
+        return "\n\n".join(
+            (
                 f"Album: {fabric['album']}\n"
                 f"Quality: {fabric['quality']}\n"
                 f"Price: ₹{fabric['price']}/m\n"
-                f"Width: {fabric['width']} inches\n\n"
+                f"Width: {fabric['width']} inches"
             )
-        return reply
-
-    elif result["intent"] == "quotation":
-        line_items = result.get("line_items") or []
-
-        if not line_items:
-            return "Please describe what you'd like a quotation for."
-
-        # Pass 1: every line item needs dimensions before we do
-        # anything else -- ask for all of them at once rather
-        # than one room at a time.
-        missing = [
-            f"Missing height/width for {_line_label(item)}."
-            for item in line_items
-            if item.get("height") is None or item.get("width") is None
-        ]
-
-        if missing:
-            return "\n".join(missing)
-
-        resolved = []  # list of (LineQuoteLabel, QuotationInput)
-        assumed_defaults = []  # notices for silently-assumed values
-
-        fabric_discount_percent = result.get("fabric_discount_percent") or 0
-        track_discount_percent = result.get("track_discount_percent") or 0
-        stitching_discount_percent = result.get("stitching_discount_percent") or 0
-
-        for item in line_items:
-            label_text = _line_label(item)
-            order_type = item.get("order_type") or "full"
-            fabric = None
-
-            if order_type != "track_only":
-                has_fabric = item.get("fabric") is not None
-                has_price = item.get("fabric_price") is not None
-
-                if has_fabric and has_price:
-                    # Negotiated rate: look the fabric up for its real
-                    # width (needed for meter calculations), but use
-                    # the given price instead of the catalogue price,
-                    # since it may differ from what's on file.
-                    matches = search_fabric(item["fabric"])
-                    if not matches:
-                        missing.append(
-                            f"Sorry, I couldn't find fabric "
-                            f"'{item['fabric']}' for {label_text}."
-                        )
-                        continue
-                    fabric = {
-                        "price": item["fabric_price"],
-                        "width": matches[0]["width"],
-                    }
-                elif has_fabric:
-                    matches = search_fabric(item["fabric"])
-                    if not matches:
-                        missing.append(
-                            f"Sorry, I couldn't find fabric "
-                            f"'{item['fabric']}' for {label_text}."
-                        )
-                        continue
-                    fabric = matches[0]
-                elif has_price:
-                    # No fabric name to look up -- width has to be
-                    # assumed. This is the one case where we can't
-                    # know the real width.
-                    DEFAULT_FABRIC_WIDTH = "48"
-                    fabric = {
-                        "price": item["fabric_price"],
-                        "width": DEFAULT_FABRIC_WIDTH,
-                    }
-                else:
-                    # Nothing given at all -- assume a default price
-                    # and width rather than blocking the quote. This
-                    # is the one place we invent a number instead of
-                    # asking; make sure the reply is explicit about it
-                    # so nobody mistakes it for a real quoted fabric.
-                    DEFAULT_FABRIC_PRICE = "590"
-                    DEFAULT_FABRIC_WIDTH = "48"
-                    fabric = {
-                        "price": DEFAULT_FABRIC_PRICE,
-                        "width": DEFAULT_FABRIC_WIDTH,
-                    }
-                    assumed_defaults.append(
-                        f"Assumed default fabric price (₹{DEFAULT_FABRIC_PRICE}/m) "
-                        f"for {label_text} -- no fabric or price was given."
-                    )
-
-            label = LineQuoteLabel(
-                room=item.get("room"),
-                window=item.get("window"),
-                curtain_type=item.get("curtain_type"),
-            )
-            quotation_input = QuotationInput(
-                fabric_width_inches=Decimal(
-                    "0" if order_type == "track_only" else fabric["width"]
-                ),
-                track_type=item.get("track") or "MTrack Premium",
-                curtain_style=(
-                    ""
-                    if order_type == "track_only"
-                    else (item.get("curtain_style") or "Pleated")
-                ),
-                height_inches=Decimal(item["height"]),
-                width_inches=Decimal(item["width"]),
-                fabric_price_per_meter=Decimal(
-                    "0" if order_type == "track_only" else str(fabric["price"])
-                ),
-                order_type=order_type,
-                fabric_discount_percent=Decimal(str(fabric_discount_percent)),
-                track_discount_percent=Decimal(str(track_discount_percent)),
-                stitching_discount_percent=Decimal(str(stitching_discount_percent)),
-            )
-            resolved.append((label, quotation_input))
-
-        if missing:
-            return "\n".join(missing)
-
-        multi = calculate_multi_line_quotation(resolved, quote_config)
-        defaults_note = (
-            ("\n\n" + "\n".join(assumed_defaults)) if assumed_defaults else ""
+            for fabric in matches
         )
 
-        if len(multi.line_results) == 1:
-            r = multi.line_results[0]
-            return (
-                f"Quotation\n\n"
-                f"Fabric: ₹{r.total_fabric_cost}\n"
-                f"Track: ₹{r.total_track_cost}\n"
-                f"Stitching: ₹{r.total_stitching_cost}\n"
-                f"Fitting: ₹{r.fitting_charges}\n"
-                f"GST: ₹{r.gst_total}\n\n"
-                f"Grand Total: ₹{r.grand_total}"
-                f"{defaults_note}"
-            )
-
-        parts = []
-        for label, line_result in zip(multi.line_labels, multi.line_results):
-            parts.append(
-                f"{_format_label(label)}\n"
-                f"  Fabric: ₹{line_result.total_fabric_cost}\n"
-                f"  Track: ₹{line_result.total_track_cost}\n"
-                f"  Stitching: ₹{line_result.total_stitching_cost}\n"
-                f"  Fitting: ₹{line_result.fitting_charges}\n"
-                f"  GST: ₹{line_result.gst_total}\n"
-                f"  Line Total: ₹{line_result.grand_total}"
-            )
-        parts.append(
-            "— — —\n"
-            f"Total Fabric: ₹{multi.total_fabric_cost}\n"
-            f"Total Track: ₹{multi.total_track_cost}\n"
-            f"Total Stitching: ₹{multi.total_stitching_cost}\n"
-            f"Total Fitting: ₹{multi.total_fitting_charges}\n"
-            f"Total GST: ₹{multi.total_gst}\n\n"
-            f"Grand Total: ₹{multi.grand_total}"
-        )
-        return "Quotation\n\n" + "\n\n".join(parts) + defaults_note
-
-    else:
+    if result["intent"] != "quotation":
         return "Sorry, I didn't understand your request."
 
+    line_items = result.get("line_items") or []
+
+    if not line_items:
+        return "Please describe what you'd like a quotation for."
+
+    missing_dimensions = [
+        f"Missing height/width for {_line_label(item)}."
+        for item in line_items
+        if item.get("height") is None or item.get("width") is None
+    ]
+
+    if missing_dimensions:
+        return "\n".join(missing_dimensions)
+
+    calculation = quote_config["calculation"]
+    discounts = {
+        "fabric": result.get("fabric_discount_percent") or 0,
+        "track": result.get("track_discount_percent") or 0,
+        "stitching": result.get("stitching_discount_percent") or 0,
+    }
+
+    resolved_items = []
+    default_notes = []
+
+    for item in line_items:
+        label, quotation_input, note = _resolve_line_item(
+            item,
+            calculation,
+            discounts,
+        )
+        resolved_items.append((label, quotation_input))
+
+        if note:
+            default_notes.append(note)
+
+    multi = calculate_multi_line_quotation(resolved_items, quote_config)
+
+    return _format_quotation_reply(multi, default_notes)
 
 def _format_item_for_review(item):
     """One readable line per extracted row, deliberately using the same
