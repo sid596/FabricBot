@@ -32,15 +32,11 @@ class QuotationInput:
 
 @dataclass(frozen=True)
 class QuotationResult:
-    fabric_width_inches: float
+    fabric_width_inches: float    
     track_type: str
     curtain_style: str
-    window_height_inches: float
-    window_width_inches: float
     fold_margin_inches: float
-    fullness: float
     number_of_panels: int
-    raw_meters_per_panel: float
     meters_per_panel: float
     total_fabric_meters: float
     fabric_price_per_meter: float
@@ -94,7 +90,6 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     fabric_increment = Decimal(calc["fabric_rounding_increment_meters"])
     track_increment = Decimal(calc["track_length_rounding_feet"])
     money_increment = Decimal(calc["currency_rounding"])
-    _positive(data.height_inches, "height")
     _positive(data.width_inches, "width")
 
     # -----------------------------
@@ -102,6 +97,12 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     # -----------------------------
     has_curtains = data.order_type in ("full", "curtains_only")
     has_track = data.order_type in ("full", "track_only")
+
+    # Height only feeds into the fabric/panel math below -- track length
+    # is driven entirely by width. Don't require it when there are no
+    # curtains in this order at all.
+    if has_curtains:
+        _positive(data.height_inches, "height")
 
     stitching_discount = has_curtains
     apply_track_discount = has_track and has_curtains
@@ -164,10 +165,9 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
             )
 
     else:
+
         fabric_width = Decimal(0)
-        fullness = Decimal(0)
         panels = 0
-        raw_meters_per_panel = Decimal(0)
         meters_per_panel = Decimal(0)
         total_fabric_meters = Decimal(0)
         stitching_rate = Decimal(0)
@@ -273,10 +273,6 @@ def calculate_curtain_quote(data: QuotationInput, config: dict[str, Any]) -> Quo
     total_track_cost=track_cost,
     fitting_sections=fitting_units,
     fitting_charges=fitting_charges,
-    window_height_inches=float(data.height_inches),
-    window_width_inches=float(data.width_inches),
-    fullness=float(fullness),
-    raw_meters_per_panel=float(raw_meters_per_panel),
     gst_total=gst_total,
     grand_total=
         fabric_cost

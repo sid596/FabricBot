@@ -140,10 +140,20 @@ def build_reply(result, quote_config):
         # Pass 1: every line item needs dimensions before we do
         # anything else -- ask for all of them at once rather
         # than one room at a time.
+        def _needs_dimensions(item):
+            order_type = item.get("order_type") or "full"
+            if order_type == "track_only":
+                return item.get("width") is None
+            return item.get("height") is None or item.get("width") is None
+
         missing = [
-            f"Missing height/width for {_line_label(item)}."
+            (
+                f"Missing width for {_line_label(item)}."
+                if (item.get("order_type") or "full") == "track_only"
+                else f"Missing height/width for {_line_label(item)}."
+            )
             for item in line_items
-            if item.get("height") is None or item.get("width") is None
+            if _needs_dimensions(item)
         ]
 
         if missing:
@@ -231,7 +241,9 @@ def build_reply(result, quote_config):
                     if order_type == "track_only"
                     else (item.get("curtain_style") or "Pleated")
                 ),
-                height_inches=Decimal(item["height"]),
+                height_inches=Decimal(
+                    item["height"] if item.get("height") is not None else 0
+                ),
                 width_inches=Decimal(item["width"]),
                 fabric_price_per_meter=Decimal(
                     "0" if order_type == "track_only" else str(fabric["price"])
