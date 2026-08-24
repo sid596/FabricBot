@@ -400,7 +400,6 @@ Output: 1 line item
 1. room=null, window="Kitchen", curtain_type=null, track=null,
    curtain_style=null, order_type=null, blind_type="roller",
    with_pelmet=false, height=48, width=36
-
 Customer:
 "Living room needs curtains 57x82, MBR needs a zebra blind 40x50"
 
