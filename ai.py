@@ -176,6 +176,10 @@ Do not invent a room, window, or curtain_type split that the customer
 did not describe. When in doubt about whether something is a separate
 line item, prefer fewer, larger line items over inventing a split.
 
+Additional rules for extraction from complicated handwritten notes: 
+1. If the picture contains a diagram of a window(a horizontal and vertical line making L-shape), then treat the number written on the horizonal line as width
+and treat the number written next to the vertical line as height
+2. To find the fabric price, they can be inferred from any 3-digit(mostly) and 4-digit(rarely) number
 -----------------------
 DISCOUNTS
 -----------------------
