@@ -27,6 +27,18 @@ class LineItem(BaseModel):
 
     order_type: Optional[str] = None
 
+    # Set ONLY when this line item is a blind, not a curtain. When
+    # blind_type is set, curtain_type/track/curtain_style/order_type
+    # do not apply and must be null -- blinds are priced differently
+    # (area rate + fitting, no track, no stitching).
+    blind_type: Optional[str] = None
+
+    # Roller blinds only. True = with pelmet, False = without.
+    # Leave null if not mentioned (the calculator defaults to with
+    # pelmet, but do not guess this on the LLM's behalf -- return
+    # null and let the caller apply the default).
+    with_pelmet: Optional[bool] = None
+
 
 class Intent(BaseModel):
     intent: str
@@ -66,8 +78,9 @@ Examples:
 - How much is Luna?
 
 quotation
-The user wants a curtain quotation. This may cover a single window, or
-multiple rooms/windows described in one message.
+The user wants a quotation -- for curtains, blinds, or a mix of both.
+This may cover a single window, or multiple rooms/windows described
+in one message.
 
 Examples:
 - Quote Luna 71 x 65
@@ -78,6 +91,9 @@ Examples:
 - Living room 57x82, MBR 53x55, both NuHome Luna, MTrack Premium
 - MBR has a balcony window and a normal window, balcony needs main and
   sheer, normal window only needs main, both 84x60, NuHome Luna
+- 71x65 roman blind
+- Roller blind for the kitchen window, 48x36, no pelmet
+- Living room needs curtains 57x82, MBR needs a zebra blind 40x50
 
 -----------------------
 FIELDS
@@ -105,9 +121,13 @@ Each line item may contain:
 - track
 - curtain_style
 - order_type
+- blind_type
+- with_pelmet
 
 Return null for any field that is not mentioned. See the LINE ITEMS
-section below for how to split a message into multiple line items.
+section below for how to split a message into multiple line items,
+and the BLIND TYPES section below for how curtain fields and blind
+fields interact.
 
 -----------------------
 LINE ITEMS
@@ -290,6 +310,117 @@ ring curtain
 → Eyelet
 
 -----------------------
+BLIND TYPES
+-----------------------
+
+Blinds are a different product from curtains and are priced
+differently (by area, not by fabric panels/track/stitching). Never
+treat a blind request as a curtain_type or curtain_style.
+
+Valid blind_type values are:
+
+- roller
+- roman
+- zebra
+- venetian
+- pvc
+
+Interpret synonyms as follows:
+
+roller blind
+roller shade
+
+→ roller
+
+roman blind
+roman shade
+
+→ roman
+
+zebra blind
+zebra shade
+day and night blind
+day-night blind
+
+→ zebra
+
+venetian blind
+slat blind
+horizontal blind
+
+→ venetian
+
+pvc blind
+pvc shade
+vinyl blind
+
+→ pvc
+
+If the customer says only "blind" or "blinds" with no type given,
+leave blind_type null -- do not guess which type. This is a
+quotation intent (dimensions may still be extracted), just with an
+unresolved blind_type.
+
+When a line item has blind_type set:
+
+- curtain_type, track, curtain_style, and order_type do NOT apply
+  to that line item. Always return them as null on that line item,
+  even if the message also mentions curtains for a different room
+  or window.
+- fabric and fabric_price still apply, but ONLY for blind_type =
+  "roman" -- Roman blinds use fabric like curtains do. Every other
+  blind type (roller, zebra, venetian, pvc) has no fabric cost at
+  all, so leave fabric and fabric_price null for those even if a
+  fabric name happens to be mentioned nearby (assume it belongs to
+  a different, curtain, line item instead).
+- with_pelmet applies ONLY to blind_type = "roller". Set it to
+  true/false only if the customer explicitly says "with pelmet" /
+  "without pelmet" / "no pelmet". Otherwise leave it null. Never set
+  with_pelmet for any other blind_type.
+
+A single message can mix curtains and blinds across different
+rooms/windows -- split them into separate line items exactly as
+described in LINE ITEMS above, using blind_type to distinguish a
+blind line item from a curtain line item.
+
+Examples:
+
+Customer:
+"71x65 roman blind"
+
+Output: 1 line item
+1. room=null, window=null, curtain_type=null, track=null,
+   curtain_style=null, order_type=null, blind_type="roman",
+   height=71, width=65
+
+Customer:
+"Roller blind for the kitchen window, 48x36, no pelmet"
+
+Output: 1 line item
+1. room=null, window="Kitchen", curtain_type=null, track=null,
+   curtain_style=null, order_type=null, blind_type="roller",
+   with_pelmet=false, height=48, width=36
+
+Customer:
+"Living room needs curtains 57x82, MBR needs a zebra blind 40x50"
+
+Output: 2 line items
+1. room="Living", blind_type=null, curtain_type=null, height=57,
+   width=82
+2. room="MBR", blind_type="zebra", curtain_type=null, track=null,
+   curtain_style=null, order_type=null, height=40, width=50
+
+Customer:
+"MBR window 71x65, roman blind, NuHome Luna at 590/m"
+
+Output: 1 line item
+1. room="MBR", blind_type="roman", curtain_type=null, track=null,
+   curtain_style=null, order_type=null, height=71, width=65,
+   fabric="NuHome Luna", fabric_price=590
+(Roman blinds use fabric/fabric_price the same way curtains do --
+this is the one blind type where those fields apply.)
+
+-----------------------
 DIMENSIONS
 -----------------------
 
@@ -377,6 +508,8 @@ Do not invent, on any line item:
 - room
 - window
 - curtain_type
+- blind_type
+- with_pelmet
 
 Determine order_type per line item.
 
@@ -449,6 +582,9 @@ Understand common variations such as:
 "I want drapes."
 
 "I want blinds."
+(Treat as a quotation request. If a specific blind type -- roller,
+roman, zebra, venetian, pvc -- is not mentioned, leave blind_type
+null rather than guessing one. See BLIND TYPES above.)
 
 "I need furnishing."
 
