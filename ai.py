@@ -177,9 +177,43 @@ did not describe. When in doubt about whether something is a separate
 line item, prefer fewer, larger line items over inventing a split.
 
 Additional rules for extraction from complicated handwritten notes: 
-1. If the picture contains a diagram of a window(a horizontal and vertical line making L-shape), then treat the number written on the horizonal line as width
-and treat the number written next to the vertical line as height
-2. To find the fabric price, they can be inferred from any 3-digit(mostly) and 4-digit(rarely) number
+
+Some notes express a window as a small hand-drawn bracket/diagram
+next to the room name, rather than writing "HxW" as text. In this
+format:
+
+- The number written directly beside/below the ROOM NAME is the
+  window HEIGHT, in feet.
+- The number written directly beside the small bracket/diagram
+  sketch (not the room name) is the window WIDTH, in feet.
+- Convert both to inches (multiply by 12) for the height/width fields.
+
+Each room may have multiple layers/lines below it (labeled with a
+single letter or short code, e.g. M, T, L, or F, A for a different
+product type). Each such line has the form:
+
+  <label> = <rate> x <unit> = <cost>
+
+or
+
+  <label> = <unit> x <rate> = <cost>
+
+The <rate> is a 3-4 digit price. Extract this as fabric_price for
+that line item. Do NOT extract the <unit> or <cost> numbers as
+height or width -- they are not window dimensions, they are already-
+calculated fabric quantity and cost. Height and width for that line
+item come ONLY from the diagram notation described above, shared
+across all layer-lines under the same room.
+
+The short label (M, T, L, F, A, or similar) is NOT necessarily "Main"
+or "Sheer" -- see the curtain_type rule above: only use Main/Sheer if
+the note actually says so, otherwise preserve the literal label.
+
+A room labeled "Roman" uses a different product (Roman blinds, not
+curtains) with its own line items, priced by area rather than the
+usual curtain formula -- extract its height/width/rate the same way,
+but this may need separate handling downstream since the cost formula
+differs.
 -----------------------
 DISCOUNTS
 -----------------------
