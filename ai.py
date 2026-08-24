@@ -595,66 +595,35 @@ def _get_cache():
     return _cache
 
 
-import concurrent.futures
-
-# The google-genai SDK has a known bug where generate_content() can
-# hang indefinitely on a stalled connection, and its own http_options
-# timeout does not reliably stop this (see googleapis/python-genai#1893,
-# #911). We enforce our own timeout here instead, independent of the
-# SDK's internal handling, so a stuck request fails loudly after N
-# seconds rather than hanging forever with zero output.
-_gemini_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
-GEMINI_TIMEOUT_SECONDS = 45
-
-# Gemini 2.5 Flash "thinks" before answering by default (dynamic budget,
-# decided by the model per-request) -- this is a big chunk of the
-# latency you were seeing, even on small outputs. 0 = fastest, no
-# reasoning at all. A moderate cap like this trades some of that speed
-# back for reasoning budget on genuinely ambiguous multi-room messages,
-# without leaving it fully unbounded. This number is a starting point,
-# not a verified-optimal value -- test your hardest extraction cases
-# (the ambiguous multi-window messages) at a few different values and
-# see where accuracy actually starts to drop before settling on one.
-GEMINI_THINKING_BUDGET = 512
-
-
-class GeminiTimeoutError(Exception):
-    pass
-
-
 def understand(message):
     cache = _get_cache()
-
-    def _call():
-        return client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=message,
-            config={
-                "response_mime_type": "application/json",
-                "response_schema": Intent,
-                "cached_content": cache.name,
-                "thinking_config": {"thinking_budget": GEMINI_THINKING_BUDGET},
-            },
-        )
-
-    future = _gemini_executor.submit(_call)
-    try:
-        response = future.result(timeout=GEMINI_TIMEOUT_SECONDS)
-    except concurrent.futures.TimeoutError:
-        raise GeminiTimeoutError(
-            f"Gemini did not respond within {GEMINI_TIMEOUT_SECONDS}s. "
-            f"This is a known google-genai SDK issue on some requests, "
-            f"not necessarily a problem with the input."
-        )
-
+    # response
+    response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents = message,
+    config={
+        "response_mime_type": "application/json",
+        "response_schema": Intent,
+        "cached_content": cache.name
+    }
+)
     usage = response.usage_metadata
 
     print(
-        f"Prompt: {usage.prompt_token_count} | "
-        f"Output: {usage.candidates_token_count} | "
-        f"Total: {usage.total_token_count}"
-    )
+
+    f"Prompt: {usage.prompt_token_count} | "
+
+    f"Output: {usage.candidates_token_count} | "
+    
+    f"Total: {usage.total_token_count}"
+
+)
     print(f"Cached Tokens : {getattr(usage, 'cached_content_token_count', 0)}")
+    # print("TEXT:")
+    # print(response.text)
+
+    # print("PARSED:")
+    # print(response.parsed)
 
     return response.parsed.model_dump()
 if __name__ == "__main__":
