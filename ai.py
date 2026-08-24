@@ -741,16 +741,14 @@ def understand(message):
 )
     usage = response.usage_metadata
 
+    cached_tokens = getattr(usage, 'cached_content_token_count', 0)
     print(
-
-    f"Prompt: {usage.prompt_token_count} | "
-
-    f"Output: {usage.candidates_token_count} | "
-    
-    f"Total: {usage.total_token_count}"
-
-)
-    print(f"Cached Tokens : {getattr(usage, 'cached_content_token_count', 0)}")
+        f"[TOKEN USAGE] "
+        f"Prompt: {usage.prompt_token_count} | "
+        f"Output: {usage.candidates_token_count} | "
+        f"Cached: {cached_tokens} | "
+        f"Total: {usage.total_token_count}"
+    )
     # print("TEXT:")
     # print(response.text)
 

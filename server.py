@@ -117,19 +117,36 @@ def build_reply(result, quote_config):
     needing a live webhook or a live Gemini call."""
 
     if result["intent"] == "price_lookup":
-        matches = search_fabric(result["fabric"])
-        print("Matches:", matches)
+        fabric_name = result.get("fabric")
+        print(f"Price lookup for fabric: {fabric_name}")
+        
+        if not fabric_name:
+            return "Please specify which fabric you'd like the price for."
+        
+        matches = search_fabric(fabric_name)
+        print("Matches found:", len(matches) if matches else 0)
+        
         if not matches:
-            return "Sorry, I couldn't find that fabric."
-        reply = ""
-        for fabric in matches:
-            reply += (
-                f"Album: {fabric['album']}\n"
-                f"Quality: {fabric['quality']}\n"
-                f"Price: ₹{fabric['price']}/m\n"
-                f"Width: {fabric['width']} inches\n\n"
+            return f"Sorry, I couldn't find '{fabric_name}' in our catalogue."
+        
+        if len(matches) == 1:
+            fabric = matches[0]
+            return (
+                f"*{fabric_name}*\n\n"
+                f"Album: {fabric.get('album', 'N/A')}\n"
+                f"Quality: {fabric.get('quality', 'N/A')}\n"
+                f"Price: ₹{fabric.get('price', 'N/A')}/meter\n"
+                f"Width: {fabric.get('width', 'N/A')} inches"
             )
-        return reply
+        else:
+            # Multiple matches
+            reply = f"Found {len(matches)} options for '{fabric_name}':\n\n"
+            for i, fabric in enumerate(matches[:3], 1):
+                reply += (
+                    f"{i}. {fabric.get('album', 'N/A')} - {fabric.get('quality', 'N/A')}\n"
+                    f"   Price: ₹{fabric.get('price', 'N/A')}/m | Width: {fabric.get('width', 'N/A')}\" \n\n"
+                )
+            return reply
 
     elif result["intent"] == "quotation":
         line_items = result.get("line_items") or []
@@ -266,40 +283,48 @@ def build_reply(result, quote_config):
         if len(multi.line_results) == 1:
             r = multi.line_results[0]
             return (
-                f"Quotation\n\n"
-                f"Fabric: ₹{r.total_fabric_cost}\n"
-                f"Track: ₹{r.total_track_cost}\n"
-                f"Stitching: ₹{r.total_stitching_cost}\n"
-                f"Fitting: ₹{r.fitting_charges}\n"
-                f"GST: ₹{r.gst_total}\n\n"
-                f"Grand Total: ₹{r.grand_total}"
+                f"*QUOTATION*\n\n"
+                f"Fabric Cost: ₹{r.total_fabric_cost:,.0f}\n"
+                f"Track Cost: ₹{r.total_track_cost:,.0f}\n"
+                f"Stitching: ₹{r.total_stitching_cost:,.0f}\n"
+                f"Fitting: ₹{r.fitting_charges:,.0f}\n"
+                f"GST (18%): ₹{r.gst_total:,.0f}\n\n"
+                f"*GRAND TOTAL: ₹{r.grand_total:,.0f}*"
                 f"{defaults_note}"
             )
 
         parts = []
         for label, line_result in zip(multi.line_labels, multi.line_results):
             parts.append(
-                f"{_format_label(label)}\n"
-                f"  Fabric: ₹{line_result.total_fabric_cost}\n"
-                f"  Track: ₹{line_result.total_track_cost}\n"
-                f"  Stitching: ₹{line_result.total_stitching_cost}\n"
-                f"  Fitting: ₹{line_result.fitting_charges}\n"
-                f"  GST: ₹{line_result.gst_total}\n"
-                f"  Line Total: ₹{line_result.grand_total}"
+                f"*{_format_label(label)}*\n"
+                f"  Fabric: ₹{line_result.total_fabric_cost:,.0f}\n"
+                f"  Track: ₹{line_result.total_track_cost:,.0f}\n"
+                f"  Stitching: ₹{line_result.total_stitching_cost:,.0f}\n"
+                f"  Fitting: ₹{line_result.fitting_charges:,.0f}\n"
+                f"  GST: ₹{line_result.gst_total:,.0f}\n"
+                f"  Line Total: ₹{line_result.grand_total:,.0f}"
             )
         parts.append(
-            "— — —\n"
-            f"Total Fabric: ₹{multi.total_fabric_cost}\n"
-            f"Total Track: ₹{multi.total_track_cost}\n"
-            f"Total Stitching: ₹{multi.total_stitching_cost}\n"
-            f"Total Fitting: ₹{multi.total_fitting_charges}\n"
-            f"Total GST: ₹{multi.total_gst}\n\n"
-            f"Grand Total: ₹{multi.grand_total}"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Total Fabric: ₹{multi.total_fabric_cost:,.0f}\n"
+            f"Total Track: ₹{multi.total_track_cost:,.0f}\n"
+            f"Total Stitching: ₹{multi.total_stitching_cost:,.0f}\n"
+            f"Total Fitting: ₹{multi.total_fitting_charges:,.0f}\n"
+            f"Total GST (18%): ₹{multi.total_gst:,.0f}\n\n"
+            f"*GRAND TOTAL: ₹{multi.grand_total:,.0f}*"
         )
-        return "Quotation\n\n" + "\n\n".join(parts) + defaults_note
+        return "*QUOTATION*\n\n" + "\n\n".join(parts) + defaults_note
 
     else:
-        return "Sorry, I didn't understand your request."
+        intent = result.get("intent", "unknown")
+        print(f"WARNING: Unrecognized intent: {intent}")
+        print(f"Full result: {result}")
+        return (
+            f"Sorry, I didn't understand that request. "
+            f"Could you please:\n\n"
+            f"1. Ask for a *fabric price* (e.g., 'Luna')\n"
+            f"2. Request a *quotation* with dimensions (e.g., '71x65 Luna')"
+        )
 
 
 def _format_item_for_review(item):
@@ -437,9 +462,11 @@ def process_message(data):
                 return
 
             result = understand(message)
-            print(result)
+            print(f"[PARSED INTENT] {result.get('intent', 'unknown')}")
+            print(f"[FULL RESULT] {result}")
 
             reply = build_reply(result, quote_config)
+            print(f"[REPLY LENGTH] {len(reply)} characters")
             send_message(phone, reply)
 
         finally:
