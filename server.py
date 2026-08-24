@@ -360,6 +360,7 @@ def build_table_review_reply(line_items):
 
 
 def process_message(data):
+    interim_timer = None
     try:
         value = data["entry"][0]["changes"][0]["value"]
         message_data = value["messages"][0]
@@ -370,68 +371,81 @@ def process_message(data):
         print(f"Phone: {phone}")
         print(f"Message Type: {message_type}")
 
-        # -----------------------------
-        # TEXT MESSAGE
-        # -----------------------------
-        if message_type == "text":
-            message = message_data["text"]["body"]
+        # WhatsApp's native typing bubble (triggered earlier, in the fast
+        # webhook route) lasts at most ~25s. If we're still working once
+        # it would have expired, THAT's when the customer needs a text
+        # message telling them we're still on it -- not immediately,
+        # since that falsely implies every request is a big one, and not
+        # never, since the bubble disappearing with no follow-up looks
+        # exactly like a crash.
+        interim_timer = threading.Timer(
+            25.0,
+            lambda: send_message(
+                phone,
+                "⏳ Still working on it, I'll reply shortly.",
+            ),
+        )
+        interim_timer.daemon = True
+        interim_timer.start()
 
-        # -----------------------------
-        # IMAGE MESSAGE
-        # -----------------------------
-        elif message_type == "image":
-            image_id = message_data["image"]["id"]
-            print(f"Image ID: {image_id}")
+        try:
+            # -----------------------------
+            # TEXT MESSAGE
+            # -----------------------------
+            if message_type == "text":
+                message = message_data["text"]["body"]
 
-            image_path = download_image(image_id)
-            visual = extract_visual_content(image_path)
-            app.logger.info(visual)
-            print(visual)
+            # -----------------------------
+            # IMAGE MESSAGE
+            # -----------------------------
+            elif message_type == "image":
+                image_id = message_data["image"]["id"]
+                print(f"Image ID: {image_id}")
 
-            if visual["content_type"] == "product_code":
-                message = visual["code"]
+                image_path = download_image(image_id)
+                visual = extract_visual_content(image_path)
+                app.logger.info(visual)
+                print(visual)
 
-            elif visual["content_type"] == "quotation_table":
-                reply = build_table_review_reply(visual.get("line_items") or [])
-                send_message(phone, reply)
-                return
+                if visual["content_type"] == "product_code":
+                    message = visual["code"]
 
+                elif visual["content_type"] == "quotation_table":
+                    reply = build_table_review_reply(visual.get("line_items") or [])
+                    send_message(phone, reply)
+                    return
+
+                else:
+                    send_message(
+                        phone,
+                        "Sorry, I couldn't tell what that photo was. Please "
+                        "send a clear photo of a product tag, or of your "
+                        "requirements note.",
+                    )
+                    return
+
+            # -----------------------------
+            # UNSUPPORTED MESSAGE TYPE
+            # -----------------------------
             else:
+                print("Unsupported message type.")
                 send_message(
                     phone,
-                    "Sorry, I couldn't tell what that photo was. Please send "
-                    "a clear photo of a product tag, or of your requirements "
-                    "note.",
+                    "Sorry, I currently only support text messages and "
+                    "photos of product codes.",
                 )
                 return
 
-        # -----------------------------
-        # UNSUPPORTED MESSAGE TYPE
-        # -----------------------------
-        else:
-            print("Unsupported message type.")
-            send_message(
-                phone,
-                "Sorry, I currently only support text messages and photos of "
-                "product codes.",
-            )
-            return
+            result = understand(message)
+            print(result)
 
-        # Let the person know we've actually started -- without this,
-        # there's no way to tell "still working" apart from "crashed
-        # and said nothing" while testing.
-        if message_type == "text":
-            send_message(
-                phone,
-                "⏳ Working on it... larger quotations can take a bit "
-                "longer, I'll reply shortly.",
-            )
+            reply = build_reply(result, quote_config)
+            send_message(phone, reply)
 
-        result = understand(message)
-        print(result)
-
-        reply = build_reply(result, quote_config)
-        send_message(phone, reply)
+        finally:
+            # Whatever happened -- fast reply, slow reply, or an early
+            # return above -- the countdown is no longer relevant.
+            interim_timer.cancel()
 
     except Exception:
         traceback.print_exc()
