@@ -14,6 +14,10 @@ deploying the same verified commit on the VPS. Do not store credentials in Git.
 - Public hostname: `https://fabricbot.grihamdecor.in`.
 - Price credentials: existing `.env` and `fabricbot.json`, kept on the server.
 - Image catalogue: `/opt/fabricbot/data/fabrics.sqlite3` and `data/photos/`.
+- Quotation drafts: `/opt/fabricbot/data/quotation-drafts.sqlite3` and `.quote-lock-*`
+  in the same directory. Keep private, writable by `fabricbot`, and preserve during
+  updates. Drafts expire after six hours of inactivity. Do not copy test drafts
+  into production or send test WhatsApp messages; mock transport in smoke tests.
 - Model cache: service account's Hugging Face cache, outside Git.
 
 ## Routing boundary

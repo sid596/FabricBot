@@ -40,15 +40,15 @@ def test_entry_command_always_returns_welcome_without_model_or_timer(monkeypatch
 
 def test_entry_word_inside_request_still_reaches_model(monkeypatch):
     understand = Mock(return_value={"intent": "quotation"})
-    deliver = Mock()
+    conversation = Mock()
     monkeypatch.setattr(server, "understand", understand)
     monkeypatch.setattr(server, "build_reply", Mock(return_value="quotation"))
-    monkeypatch.setattr(server, "deliver_reply", deliver)
+    monkeypatch.setattr(server, "quotation_conversation", lambda: conversation)
     body = "fabricbot roller blind 108 x 108"
     server.process_message({"entry": [{"changes": [{"value": {"messages": [
         {"from": "test", "type": "text", "text": {"body": body}}]}}]}]})
     understand.assert_called_once_with(body)
-    deliver.assert_called_once_with("test", "quotation")
+    conversation.handle.assert_called_once_with("test", body)
 
 HEADERS = ["t", "Album", "Quality", "Width", "Cut Rate", "Price"]
 
@@ -262,12 +262,14 @@ def test_search_reads_new_index_commits_and_new_prices(tmp_path, monkeypatch):
 def test_quotation_note_preserves_review_workflow(tmp_path, monkeypatch):
     photo=tmp_path/'note.jpg'; photo.write_bytes(b'fixture')
     monkeypatch.setattr(server,'download_image',lambda _:str(photo))
-    monkeypatch.setattr(server,'extract_visual_content',lambda *a:{'content_type':'quotation_table','line_items':[{'room':'Living room','height':84,'width':96,'fabric':'Luna'}]})
+    monkeypatch.setattr(server,'extract_visual_content',lambda *a:{'content_type':'quotation_table','label_text':'Living room height 84 width 96 inches Luna','line_items':[{'room':'Living room','height':84,'width':96,'fabric':'Luna'}]})
     sent=Mock(); documents=Mock()
     monkeypatch.setattr(server,'send_message',sent)
     monkeypatch.setattr(server,'send_document',documents)
+    conversation = Mock()
+    monkeypatch.setattr(server, 'quotation_conversation', lambda: conversation)
     server.process_message({'entry':[{'changes':[{'value':{'messages':[{'from':'test','type':'image','image':{'id':'note'}}]}}]}]})
-    assert '84x96' in sent.call_args.args[1]
+    assert 'height 84 width 96 inches' in conversation.handle.call_args.args[1]
     documents.assert_not_called()
     assert not photo.exists()
 
