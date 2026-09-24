@@ -1,5 +1,7 @@
 import threading
 import traceback
+import os
+from pathlib import Path
 from collections import deque
 
 from flask import Flask, request
@@ -15,14 +17,16 @@ from pricing import (
     load_config,
 )
 from search import search_fabric
-from whatsapp import send_message, send_typing_indicator
+from whatsapp import send_message, send_typing_indicator, send_document, send_image
+from quotation_pdf import QuotationReply, render_quotation_pdf
+from visual_search import find_similar, match_caption, CatalogueNotReady
 from images import download_image
 from vision import extract_code, extract_visual_content
 from decimal import Decimal
 
 app = Flask(__name__)
 
-quote_config = load_config("config.json")
+quote_config = load_config(str(Path(__file__).with_name("config.json")))
 VERIFY_TOKEN = "fabricbot123"
 
 _calc = quote_config["calculation"]
@@ -415,7 +419,12 @@ def build_reply(result, quote_config):
                 curtain_style = original_item.get("curtain_style") or "Pleated"
                 order_type = original_item.get("order_type") or "full"
 
-                summary += f"  Style: {curtain_style}\n"
+                if order_type != "track_only":
+                    summary += f"  Style: {curtain_style}\n"
+                height_text = f"{original_item['height']}\" × " if original_item.get("height") is not None else ""
+                summary += f"  Dimensions: {height_text}{original_item['width']}\"\n"
+                if original_item.get("fabric") and order_type != "track_only":
+                    summary += f"  Fabric: {original_item['fabric']}\n"
 
                 if order_type != "track_only":
                     panels = line_result.number_of_panels
@@ -424,7 +433,7 @@ def build_reply(result, quote_config):
                     fabric_price = line_result.fabric_price_per_meter
 
                     summary += (
-                        f"  Panels: {panels} × {meters_per_panel:.1f}m = {total_meters:.1f}m\n"
+                        f"  Panels: {panels} × {meters_per_panel:.3f}m; rounded total {total_meters:.1f}m\n"
                         f"  Fabric Price Taken: ₹{fabric_price:,.0f}/m\n"
                         f"  Fabric Cost: ₹{line_result.total_fabric_cost:,.0f}\n"
                     )
@@ -451,7 +460,7 @@ def build_reply(result, quote_config):
 
         # Single line quotation
         if len(line_summaries) == 1:
-            return f"*QUOTATION*\n\n{line_summaries[0]}{defaults_note}"
+            return QuotationReply(f"*QUOTATION*\n\n{line_summaries[0]}{defaults_note}")
 
         # Multi-line quotation -- combine curtain + blind aggregate totals
         total_fabric_cost = (multi_curtains.total_fabric_cost if multi_curtains else 0) + (
@@ -485,7 +494,7 @@ def build_reply(result, quote_config):
         summary_lines.append(f"*GRAND TOTAL: ₹{grand_total:,.0f}*")
 
         parts = line_summaries + ["\n".join(summary_lines)]
-        return "*QUOTATION*\n\n" + "\n\n".join(parts) + defaults_note
+        return QuotationReply("*QUOTATION*\n\n" + "\n\n".join(parts) + defaults_note)
 
     else:
         intent = result.get("intent", "unknown")
@@ -556,8 +565,35 @@ def build_table_review_reply(line_items):
     )
 
 
+def deliver_search(phone, preferences=None, image_path=None):
+    try:
+        matches = find_similar(preferences, image_path)
+    except CatalogueNotReady:
+        send_message(phone, "Fabric photo search is being set up. I can still help with prices and quotations.")
+        return
+    if not matches:
+        send_message(phone, "I couldn't find catalogue photos matching that fabric type or material. Try a broader description.")
+        return
+    expected = int(os.getenv("FABRIC_SEARCH_RESULT_COUNT", "5"))
+    if len(matches) < expected:
+        intro = f"I found {len(matches)} matching catalogue photos (fewer than {expected} are available for this search)."
+    else:
+        intro = f"Here are the {len(matches)} closest fabric photos from our catalogue."
+    send_message(phone, intro)
+    for position, match in enumerate(matches, 1):
+        send_image(phone, match["image_path"], match_caption(match, position))
+
+
+def deliver_reply(phone, reply):
+    if isinstance(reply, QuotationReply):
+        send_document(phone, render_quotation_pdf(reply))
+    else:
+        send_message(phone, reply)
+
+
 def process_message(data):
     interim_timer = None
+    image_path = None
     try:
         value = data["entry"][0]["changes"][0]["value"]
         message_data = value["messages"][0]
@@ -600,12 +636,16 @@ def process_message(data):
                 print(f"Image ID: {image_id}")
 
                 image_path = download_image(image_id)
-                visual = extract_visual_content(image_path)
+                visual = extract_visual_content(image_path, message_data["image"].get("caption", ""))
                 app.logger.info(visual)
                 print(visual)
 
                 if visual["content_type"] == "product_code":
                     message = visual["code"]
+
+                elif visual["content_type"] == "fabric_photo":
+                    deliver_search(phone, visual.get("search_preferences"), image_path)
+                    return
 
                 elif visual["content_type"] == "quotation_table":
                     reply = build_table_review_reply(visual.get("line_items") or [])
@@ -616,7 +656,7 @@ def process_message(data):
                     send_message(
                         phone,
                         "Sorry, I couldn't tell what that photo was. Please "
-                        "send a clear photo of a product tag, or of your "
+                        "send a clear fabric photo, product tag, or your "
                         "requirements note.",
                     )
                     return
@@ -629,7 +669,7 @@ def process_message(data):
                 send_message(
                     phone,
                     "Sorry, I currently only support text messages and "
-                    "photos of product codes.",
+                    "fabric photos, product tags and requirements notes.",
                 )
                 return
 
@@ -637,14 +677,19 @@ def process_message(data):
             print(f"[PARSED INTENT] {result.get('intent', 'unknown')}")
             print(f"[FULL RESULT] {result}")
 
+            if result.get("intent") == "fabric_search":
+                deliver_search(phone, result.get("search_preferences"))
+                return
             reply = build_reply(result, quote_config)
             print(f"[REPLY LENGTH] {len(reply)} characters")
-            send_message(phone, reply)
+            deliver_reply(phone, reply)
 
         finally:
             # Whatever happened -- fast reply, slow reply, or an early
             # return above -- the countdown is no longer relevant.
             interim_timer.cancel()
+            if image_path:
+                Path(image_path).unlink(missing_ok=True)
 
     except Exception:
         traceback.print_exc()

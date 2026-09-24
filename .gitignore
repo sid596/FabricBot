@@ -4,3 +4,9 @@ fabricbot.json
 __pycache__/
 *.pyc
 venv/
+.venv/
+.pytest_cache/
+data/
+tmp/
+output/
+!.env.example

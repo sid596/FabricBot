@@ -8,3 +8,8 @@ google-auth
 google-genai
 rapidfuzz
 gunicorn
+reportlab>=4.2,<5
+Pillow>=11,<13
+numpy>=2,<3
+sentence-transformers>=3,<6
+beautifulsoup4>=4.12,<5

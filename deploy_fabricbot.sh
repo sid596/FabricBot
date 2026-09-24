@@ -121,6 +121,12 @@ TEMP_ARCHIVE="/tmp/fabricbot_deploy.tar.gz"
 
 tar \
     --exclude=".git" \
+    --exclude=".venv" \
+    --exclude="venv" \
+    --exclude="data" \
+    --exclude="tmp" \
+    --exclude="output" \
+    --exclude=".pytest_cache" \
     --exclude="__pycache__" \
     --exclude=".DS_Store" \
     --exclude="*.pyc" \

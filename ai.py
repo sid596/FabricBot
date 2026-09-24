@@ -9,7 +9,9 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
-from typing import Optional, types
+from typing import Optional
+from fabric_attributes import FabricPreferences, SEARCH_INSTRUCTIONS
+from prompt_cache import PromptCache
 
 class LineItem(BaseModel):
     room: Optional[str] = None
@@ -42,6 +44,7 @@ class LineItem(BaseModel):
 
 class Intent(BaseModel):
     intent: str
+    search_preferences: Optional[FabricPreferences] = None
 
     # Used only when intent = price_lookup
     fabric: Optional[str] = None
@@ -703,59 +706,17 @@ Return ONLY valid JSON.
 
 """
 
-_cache = None
-
-
-def _get_cache():
-    """
-    Create the Gemini prompt cache once and reuse it for every request,
-    instead of creating a brand new cache on every single message.
-    Note: the cache still has a 24h TTL and isn't auto-refreshed, so a
-    long-running server process will need a restart (or a proper refresh
-    mechanism) at least once a day.
-    """
-    global _cache
-    if _cache is None:
-        _cache = client.caches.create(
-            model="gemini-2.5-flash",
-            config=genai.types.CreateCachedContentConfig(
-                display_name="furnishing0calculation-rules-v1",
-                system_instruction=KNOWLEDGE,
-                ttl="86400s",
-            ),
-        )
-    return _cache
+KNOWLEDGE += "\n" + SEARCH_INSTRUCTIONS
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+_prompt_cache = PromptCache(client, MODEL, KNOWLEDGE)
 
 
 def understand(message):
-    cache = _get_cache()
-    # response
-    response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents = message,
-    config={
-        "response_mime_type": "application/json",
-        "response_schema": Intent,
-        "cached_content": cache.name
-    }
-)
-    usage = response.usage_metadata
-
-    cached_tokens = getattr(usage, 'cached_content_token_count', 0)
-    print(
-        f"[TOKEN USAGE] "
-        f"Prompt: {usage.prompt_token_count} | "
-        f"Output: {usage.candidates_token_count} | "
-        f"Cached: {cached_tokens} | "
-        f"Total: {usage.total_token_count}"
-    )
-    # print("TEXT:")
-    # print(response.text)
-
-    # print("PARSED:")
-    # print(response.parsed)
-
+    response = _prompt_cache.generate(message, Intent)
+    if response.parsed is None:
+        raise ValueError("Angie could not parse the request")
     return response.parsed.model_dump()
+
 if __name__ == "__main__":
 
     tests = [

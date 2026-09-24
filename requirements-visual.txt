@@ -1,0 +1,2 @@
+# Compatibility alias: all runtime features are in the main requirements.
+-r requirements.txt

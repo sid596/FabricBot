@@ -86,15 +86,19 @@ for test in tests:
     print("=" * 70)
     print(test["name"])
     quote = calculate_curtain_quote(test["input"], config)
-    assert quote.window_height_inches == float(test["input"].height_inches)
-    assert quote.window_width_inches == float(test["input"].width_inches)
-    assert quote.raw_meters_per_panel == quote.meters_per_panel
-
-    expected_fullness = (
-        float(config["calculation"]["default_fullness"])
-        if test["input"].order_type != "track_only"
-        else 0.0
+    # The pricing-package refactor removed the old diagnostic fields.
+    # Verify the public results and the component total instead.
+    assert quote.grand_total == (
+        quote.total_fabric_cost + quote.total_track_cost
+        + quote.total_stitching_cost + quote.fitting_charges + quote.gst_total
     )
-
-    assert quote.fullness == expected_fullness
+    if test["input"].order_type == "track_only":
+        assert quote.number_of_panels == 0
+        assert quote.total_fabric_meters == 0
+        assert quote.total_stitching_cost == 0
+    else:
+        assert quote.number_of_panels > 0
+        assert quote.total_fabric_meters >= quote.number_of_panels * quote.meters_per_panel
+    if test["input"].order_type == "curtains_only":
+        assert quote.total_track_cost == 0
     print(quote)
