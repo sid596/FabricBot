@@ -105,3 +105,8 @@ Tests mock Gemini, Google Sheets and WhatsApp; they do not contact customers.
 Live photo-index verification and PDF rendering are separate local checks.
 Deploying the new code still requires the usual one-time application reload;
 subsequent cache refreshes do not. This change does not deploy or push anything.
+
+## Production deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Git-based update procedure, VPS/service
+inventory, verification steps and the shared WhatsApp gateway routing boundary.
