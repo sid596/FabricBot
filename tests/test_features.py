@@ -33,7 +33,7 @@ def test_entry_command_always_returns_welcome_without_model_or_timer(monkeypatch
     assert sent.call_count == 2
     assert sent.call_args_list[0] == sent.call_args_list[1]
     assert sent.call_args.args[0] == "test"
-    assert "FabricBot is ready." in sent.call_args.args[1]
+    assert sent.call_args.args[1] == "Hi! I am Angie, how can I help you?"
     understand.assert_not_called()
     timer.assert_not_called()
 

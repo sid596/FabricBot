@@ -609,12 +609,7 @@ def process_message(data):
         if message_type == "text" and message_data["text"]["body"].strip().casefold() == "fabricbot":
             send_message(
                 phone,
-                "FabricBot is ready.\n\n"
-                "Try any of these:\n"
-                "• Price of Nuhome Odin\n"
-                "• Roller blind 108 x 108 inches — for a PDF quotation\n"
-                "• Show sage green linen-look main curtains\n\n"
-                "You can also send a fabric photo to find similar options.",
+                "Hi! I am Angie, how can I help you?",
             )
             return
 
