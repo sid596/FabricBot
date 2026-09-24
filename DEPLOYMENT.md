@@ -8,7 +8,7 @@ deploying the same verified commit on the VPS. Do not store credentials in Git.
 
 - Host: `64.227.138.31`; SSH administration account: `root`.
 - Project: `/opt/fabricbot`; service account: `fabricbot`.
-- Active deployment branch: `rich-quotation` (not `main`).
+- Active deployment branch: `main`, tracking `origin/main`.
 - Python: `/opt/fabricbot/venv/bin/python`; systemd service: `fabricbot`.
 - Application listener: `127.0.0.1:5000`.
 - Public hostname: `https://fabricbot.grihamdecor.in`.
@@ -31,9 +31,9 @@ ownership and intended routing before changing them.
 1. Check the current local and server Git commits, tracked-file changes, service
    status, free memory/disk and running dependencies. Preserve untracked server
    files; do not upload the local working directory over production.
-2. Run local tests. Commit the intended changes on the working branch and push
+2. Run local tests. Commit the intended changes, merge into `main` and push
    to this repository. Record the old and new commit IDs.
-3. On the VPS, fetch that branch and fast-forward to the intended commit. Verify
+3. On the VPS, fetch `main` and fast-forward the local `main` branch to the intended commit. Verify
    `git rev-parse HEAD` equals the pushed commit. Stop if tracked production files
    have local changes or the update is not a fast-forward.
 4. Install changed requirements into the service's virtual environment and run
