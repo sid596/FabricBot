@@ -109,7 +109,19 @@ def rank_records(records, vectors, query_vector, preferences, prices, limit):
             continue
         ranked.append({**record, "price": price["price"], "width": price["width"], "score": score})
     ranked.sort(key=lambda r: (-r["score"], r["id"]))
-    return ranked[:limit]
+    # Coordinating fabrics recur in several albums with different source URLs.
+    # Return the highest-ranked eligible listing for each actual fabric/SKU.
+    distinct, seen_skus = [], set()
+    for record in ranked:
+        key = (normalise(record["brand"]), normalise(record["quality"]),
+               normalise(str(record["sku"]))) if record.get("sku") else (record["id"],)
+        if key in seen_skus:
+            continue
+        seen_skus.add(key)
+        distinct.append(record)
+        if len(distinct) == limit:
+            break
+    return distinct
 
 
 def find_similar(preferences=None, image_path=None, *, limit=None, db_path=None):

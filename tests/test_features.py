@@ -274,3 +274,16 @@ def test_cache_creation_failure_has_a_retry_backoff(monkeypatch):
     clock.return_value=61
     cache.generate('three',dict)
     assert client.caches.create.call_count==2
+
+
+def test_same_fabric_sku_across_albums_is_returned_only_once(tmp_path):
+    photo=tmp_path/'photo.jpg';photo.write_bytes(b'fixture')
+    rows=[{'id':str(i),'brand':'Nuhome','album':f'Album {i}',
+           'quality':'Nuhome Zany','sku':'422' if i<2 else str(i),
+           'uses':['main'],'image_path':str(photo)} for i in range(7)]
+    prices=[{**r,'price':'1890','width':'54'} for r in rows]
+    vectors=np.array([[.8,0],[1.,0],[.7,0],[.6,0],[.5,0],[.4,0],[.3,0]])
+    results=rank_records(rows,vectors,np.array([1.,0]),FabricPreferences(),prices,5)
+    assert len(results)==5
+    assert len({(r['quality'],r['sku']) for r in results})==5
+    assert results[0]['id']=='1'
