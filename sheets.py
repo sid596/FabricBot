@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 class CatalogueCache:
-    def __init__(self, loader, ttl=300, clock=time.monotonic):
+    def __init__(self, loader, ttl=21600, clock=time.monotonic):
         self.loader, self.ttl, self.clock = loader, ttl, clock
         self._snapshot = None
         self._expires = 0
@@ -44,7 +44,7 @@ def _read_sheet():
     return book.worksheet(os.getenv("GOOGLE_SHEET_TAB", "data")).get_all_values()
 
 
-catalogue_cache = CatalogueCache(_read_sheet, ttl=max(1, int(os.getenv("SHEET_CACHE_TTL_SECONDS", "300"))))
+catalogue_cache = CatalogueCache(_read_sheet, ttl=max(1, int(os.getenv("SHEET_CACHE_TTL_SECONDS", "21600"))))
 
 
 def get_catalogue(force=False):

@@ -32,7 +32,7 @@ Customer-uploaded temporary photos are deleted after processing.
 ## Refresh without restarting
 
 - Sheet prices refresh on the first request after the configured TTL (default
-  five minutes). Concurrent requests in one worker share one complete snapshot.
+  six hours). Concurrent requests in one worker share one complete snapshot.
   A failed refresh surfaces an error instead of silently quoting old prices.
   Each Gunicorn worker maintains its own bounded cache.
 - Gemini prompt caches renew before expiry. If a cache has been removed remotely,
