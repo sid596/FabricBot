@@ -18,6 +18,38 @@ from visual_search import rank_records, matches_filters, open_index, save_record
 import server
 import whatsapp
 
+
+@pytest.mark.parametrize("body", ["fabricbot", "FABRICBOT", "  FabricBot\n"])
+def test_entry_command_always_returns_welcome_without_model_or_timer(monkeypatch, body):
+    sent, understand, timer = Mock(), Mock(), Mock()
+    monkeypatch.setattr(server, "send_message", sent)
+    monkeypatch.setattr(server, "understand", understand)
+    monkeypatch.setattr(server.threading, "Timer", timer)
+    payload = {"entry": [{"changes": [{"value": {"messages": [
+        {"from": "test", "type": "text", "text": {"body": body}}]}}]}]}
+    # Re-entering after a previous request must behave the same way.
+    server.process_message(payload)
+    server.process_message(payload)
+    assert sent.call_count == 2
+    assert sent.call_args_list[0] == sent.call_args_list[1]
+    assert sent.call_args.args[0] == "test"
+    assert "FabricBot is ready." in sent.call_args.args[1]
+    understand.assert_not_called()
+    timer.assert_not_called()
+
+
+def test_entry_word_inside_request_still_reaches_model(monkeypatch):
+    understand = Mock(return_value={"intent": "quotation"})
+    deliver = Mock()
+    monkeypatch.setattr(server, "understand", understand)
+    monkeypatch.setattr(server, "build_reply", Mock(return_value="quotation"))
+    monkeypatch.setattr(server, "deliver_reply", deliver)
+    body = "fabricbot roller blind 108 x 108"
+    server.process_message({"entry": [{"changes": [{"value": {"messages": [
+        {"from": "test", "type": "text", "text": {"body": body}}]}}]}]})
+    understand.assert_called_once_with(body)
+    deliver.assert_called_once_with("test", "quotation")
+
 HEADERS = ["t", "Album", "Quality", "Width", "Cut Rate", "Price"]
 
 

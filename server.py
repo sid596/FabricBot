@@ -604,6 +604,20 @@ def process_message(data):
         print(f"Phone: {phone}")
         print(f"Message Type: {message_type}")
 
+        # The gateway forwards the entry command too. It is not a fabric
+        # request and must never be classified by the language model.
+        if message_type == "text" and message_data["text"]["body"].strip().casefold() == "fabricbot":
+            send_message(
+                phone,
+                "FabricBot is ready.\n\n"
+                "Try any of these:\n"
+                "• Price of Nuhome Odin\n"
+                "• Roller blind 108 x 108 inches — for a PDF quotation\n"
+                "• Show sage green linen-look main curtains\n\n"
+                "You can also send a fabric photo to find similar options.",
+            )
+            return
+
         # WhatsApp's native typing bubble (triggered earlier, in the fast
         # webhook route) lasts at most ~25s. If we're still working once
         # it would have expired, THAT's when the customer needs a text
