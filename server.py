@@ -1,7 +1,6 @@
 import threading
 import traceback
 import os
-import json
 from pathlib import Path
 from collections import deque
 
@@ -24,10 +23,6 @@ from visual_search import find_similar, match_caption, CatalogueNotReady
 from images import download_image
 from vision import extract_code, extract_visual_content
 from decimal import Decimal
-from quote_conversation import DraftStore, QuoteConversation, normalized
-from search import catalogue_records
-
-draft_store = DraftStore()
 
 app = Flask(__name__)
 
@@ -264,9 +259,7 @@ def build_reply(result, quote_config):
                 has_fabric = item.get("fabric") is not None
                 has_price = item.get("fabric_price") is not None
 
-                if item.get('_resolved_fabric'):
-                    fabric = item['_resolved_fabric']
-                elif has_fabric and has_price:
+                if has_fabric and has_price:
                     # Negotiated rate: look the fabric up for its real
                     # width (needed for meter calculations), but use
                     # the given price instead of the catalogue price,
@@ -598,18 +591,7 @@ def deliver_reply(phone, reply):
         send_message(phone, reply)
 
 
-def quotation_conversation():
-    return QuoteConversation(draft_store, quote_config, catalogue_records,
-                             build_reply, send_message, deliver_reply)
-
-
 def process_message(data):
-    phone = data["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
-    with draft_store.serialized(phone):
-        _process_message(data)
-
-
-def _process_message(data):
     interim_timer = None
     image_path = None
     try:
@@ -654,11 +636,6 @@ def _process_message(data):
             # -----------------------------
             if message_type == "text":
                 message = message_data["text"]["body"]
-                if draft_store.get(phone).get('active') or normalized(message) in (
-                    'confirm quotation', 'cancel quotation', 'new quotation'
-                ):
-                    quotation_conversation().handle(phone, message)
-                    return
 
             # -----------------------------
             # IMAGE MESSAGE
@@ -672,30 +649,16 @@ def _process_message(data):
                 app.logger.info(visual)
                 print(visual)
 
-                caption = message_data['image'].get('caption', '')
-                # Use literal OCR, not the legacy table parser's inferred units/order.
-                observation = 'Photo label/requirements (OCR, must be reviewed): ' + json.dumps({
-                    'content_type': visual['content_type'],
-                    'visible_text': visual.get('label_text') or 'No complete legible transcription; ask for the label/requirements.',
-                    'quality_hint': visual.get('code'),
-                }, ensure_ascii=False)
-                photo_message = observation + '\nCustomer caption: ' + caption
-                state = draft_store.get(phone)
-                if state.get('active') or visual.get('quotation_requested') or visual['content_type'] == 'quotation_table':
-                    quotation_conversation().handle(phone, photo_message)
-                    return
-
                 if visual["content_type"] == "product_code":
-                    references = state.setdefault('references', [])
-                    if len(references) >= 20:
-                        send_message(phone, 'Please start a quotation with the photos already sent before adding more, or send “new quotation” to start fresh.')
-                        return
-                    references.append(photo_message)
-                    draft_store.put(phone, state)
-                    message = photo_message if caption else visual["code"]
+                    message = visual["code"]
 
                 elif visual["content_type"] == "fabric_photo":
                     deliver_search(phone, visual.get("search_preferences"), image_path)
+                    return
+
+                elif visual["content_type"] == "quotation_table":
+                    reply = build_table_review_reply(visual.get("line_items") or [])
+                    send_message(phone, reply)
                     return
 
                 else:
@@ -725,9 +688,6 @@ def _process_message(data):
 
             if result.get("intent") == "fabric_search":
                 deliver_search(phone, result.get("search_preferences"))
-                return
-            if result.get('intent') == 'quotation':
-                quotation_conversation().handle(phone, message)
                 return
             reply = build_reply(result, quote_config)
             print(f"[REPLY LENGTH] {len(reply)} characters")

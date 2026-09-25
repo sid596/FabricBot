@@ -22,35 +22,9 @@ service-account credentials, not an OAuth link to a particular spreadsheet.
 
 ## PDF quotations
 
-A quotation is now a conversation, not an immediate PDF. Send a fabric label photo
-with a caption such as `Quote this for the living room, window 1: height 84 inches,
-width 96 inches, measured window opening`, or send the measurements afterwards.
-Angie keeps the photo's legible label/code and subsequent answers in your draft.
-Multiple photos require an explicit mapping to windows/layers; a similar-looking
-fabric is never substituted for the selected fabric.
-
-Angie asks about missing or ambiguous units, height/width, window labels, fabric
-brand/album/quality and colour/SKU, main/sheer layers, new/existing tracks, stitching,
-lining and roller pelmets as applicable. Unsupported extras (including lining)
-must be clarified or handled by a salesperson, not silently added to a total.
-Catalogue matches must resolve to one price/width. OCR can still make mistakes:
-the customer must check the transcribed code and requirements in the review.
-
-Once complete, Angie sends a text review with pricing, GST, fitting and standard
-calculation assumptions. Corrections invalidate the previous review. Reply exactly
-`confirm quotation` to receive a PDF of the reviewed content. A plain `yes` never
-bypasses this gate. `cancel quotation` discards the draft; `new quotation` starts
-fresh. While a draft is active, messages/photos are treated as quotation follow-ups;
-cancel it before starting a separate fabric search or price lookup.
-
-Drafts are isolated per sender and stored in `data/quotation-drafts.sqlite3`, with
-file locks for concurrent workers, and survive service restarts. They expire after
-six hours of inactivity and expired rows are purged on subsequent reads. Pending
-photo references follow the same expiry. `QUOTE_DRAFT_DB` can override the path.
-The SQLite file contains conversation/OCR text and quoted prices; keep it private
-and outside Git. Photos themselves are not retained in drafts.
-
-Clarifications and price lookups remain text messages. PDFs are built in memory, uploaded through the WhatsApp
+A completed quotation is sent as a PDF document, with line items, GST, totals,
+and assumptions from the existing calculator. Clarifications and price lookups
+remain text messages. PDFs are built in memory, uploaded through the WhatsApp
 media API, and sent using the returned media ID. No public document host is needed.
 The bundled Noto Sans fonts include the rupee symbol (license in `assets/fonts/`).
 Customer-uploaded temporary photos are deleted after processing.
